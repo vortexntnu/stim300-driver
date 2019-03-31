@@ -16,7 +16,8 @@
 class DriverStim300 {
 public:
 
-    DriverStim300(SerialDriver &serial_driver);
+    explicit DriverStim300(SerialDriver &serial_driver);
+    ~DriverStim300();
     double getAccX() const;
     double getAccY() const;
     double getAccZ() const;

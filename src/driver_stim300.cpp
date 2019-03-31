@@ -27,6 +27,11 @@ DriverStim300::DriverStim300(SerialDriver &serial_driver) :
   datagram_size_ = datagram_parser_.getDatagramSize();
 }
 
+DriverStim300::~DriverStim300()
+{
+  serial_driver_.close();
+}
+
 double DriverStim300::getAccX()const{return sensor_data_.acc[0];}
 double DriverStim300::getAccY()const{return sensor_data_.acc[1];}
 double DriverStim300::getAccZ()const{return sensor_data_.acc[2];}
