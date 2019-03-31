@@ -4,8 +4,25 @@ project(driver_stim300)
 set(CMAKE_CXX_STANDARD 17)
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+#
+# Prefer -pthread compiler and linker flag when using libpthread. This must
+# be set before call to find_package(Threads).
+#
+set(THREADS_HAVE_PTHREAD_ARG 1)
+find_package(Threads REQUIRED)
 
-add_library(DatagramParser
-        src/datagram_parser.cpp
-        src/datagram_parser.h
-        src/stim300_constants.h)
+find_package(PkgConfig)
+pkg_check_modules(SERIAL libserial)
+
+add_library(DriverStim300
+        src/serial_libserial.cpp
+        src/datagram_parser.cpp)
+
+target_compile_features(DriverStim300 PRIVATE cxx_std_17)
+
+
+target_link_libraries(DriverStim300  PRIVATE ${SERIAL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+
+
+add_executable(driver_stim300_example src/main.cpp)
+target_link_libraries(driver_stim300_example PRIVATE DriverStim300)
