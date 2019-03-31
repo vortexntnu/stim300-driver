@@ -15,10 +15,19 @@ find_package(PkgConfig)
 pkg_check_modules(SERIAL libserial)
 
 add_library(DriverStim300
+        src/driver_stim300.cpp
         src/serial_libserial.cpp
         src/datagram_parser.cpp)
 
 target_compile_features(DriverStim300 PRIVATE cxx_std_17)
+
+target_include_directories(DriverStim300
+        PUBLIC
+            $<INSTALL_INTERFACE:include>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/src
+        )
 
 
 target_link_libraries(DriverStim300  PRIVATE ${SERIAL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
