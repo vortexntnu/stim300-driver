@@ -22,9 +22,10 @@ public:
     virtual void open(BAUDRATE baudrate) = 0;
     virtual void close() = 0;
     virtual bool readByte(uint8_t & byte,unsigned int ms_timeout) = 0;
-    virtual void readChunk(std::vector<unsigned char> &data_buffer, unsigned int num_of_bytes, unsigned int ms_timeout) = 0;
-    virtual void write(const std::vector< unsigned char > &data_buffer) = 0;
-    virtual bool isDataAvailable() = 0;
+    //virtual void readChunk(std::vector<unsigned char> &data_buffer, unsigned int num_of_bytes, unsigned int ms_timeout) = 0;
+    //virtual void write(const std::vector< unsigned char > &data_buffer) = 0;
+    //virtual bool isDataAvailable() = 0;
+    virtual ~SerialDriver() = default;
 
     //class ReadTimeout : public std::runtime_error
     //{

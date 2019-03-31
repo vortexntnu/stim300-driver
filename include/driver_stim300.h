@@ -16,7 +16,7 @@
 class DriverStim300 {
 public:
 
-    DriverStim300(std::string &serial_port_name);
+    DriverStim300(SerialDriver &serial_driver);
     double getAccX() const;
     double getAccY() const;
     double getAccZ() const;
@@ -35,7 +35,7 @@ private:
     enum class Mode: uint8_t{Init, Normal, Service};
     Mode mode_;
 
-    SerialLibSerial serial_driver_;
+    SerialDriver& serial_driver_;
     uint16_t serial_read_timeout_ms_;
     static constexpr uint8_t BUFFER_SIZE_{stim_300::MAX_DATAGRAM_SIZE*2};
     std::vector<uint8_t > buffer_;

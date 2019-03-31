@@ -15,7 +15,7 @@ public:
 
     explicit SerialLibSerial(const std::string &serial_port_name);
 
-    ~SerialLibSerial();
+    ~SerialLibSerial() override;
 
     void open(BAUDRATE baudrate) override;
 
@@ -24,11 +24,11 @@ public:
     bool readByte(uint8_t & byte,unsigned int ms_timeout) override;
 
     void readChunk(std::vector<unsigned char>& data_buffer, unsigned int num_of_bytes,
-                   unsigned int ms_timeout) override;
+                   unsigned int ms_timeout);
 
-    void write(const std::vector<unsigned char> &data_buffer) override;
+    void write(const std::vector<unsigned char> &data_buffer);
 
-    bool isDataAvailable() override;
+    bool isDataAvailable();
 
 private:
     SerialPort serial_port_;

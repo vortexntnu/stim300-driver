@@ -7,8 +7,8 @@
 #include <bitset>
 
 
-DriverStim300::DriverStim300(std::string &serial_port_name) :
-    serial_driver_(serial_port_name)
+DriverStim300::DriverStim300(SerialDriver &serial_driver) :
+    serial_driver_(serial_driver)
     ,serial_read_timeout_ms_(1)
     ,mode_(Mode::Normal)
     ,n_read_bytes_(0)
