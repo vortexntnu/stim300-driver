@@ -6,53 +6,54 @@
 
 using namespace stim_300;
 
-DatagramParser::DatagramParser(DatagramIdentifier dg_id,GyroOutputUnit gyro_o, AccOutputUnit acc_o, InclOutputUnit incl_o)
+DatagramParser::DatagramParser(DatagramIdentifier dg_id, GyroOutputUnit gyro_o, AccOutputUnit acc_o,
+                               InclOutputUnit incl_o)
   : is_included_(isIncluded(dg_id))
-  , use_termination_{false}
+  , use_termination_{ false }
   , gyro_scale_([=] {
-        switch (gyro_o)
-        {
-          case GyroOutputUnit::ANGULAR_RATE:          // units are in rad/s
-          case GyroOutputUnit::AVERAGE_ANGULAR_RATE:  // units are in rad/s
-            return GYRO_SCALE;
-          case GyroOutputUnit::INCREMENTAL_ANGLE:  // units are in rad/sample
-          case GyroOutputUnit::INTEGRATED_ANGLE:   // units are in rad
-            return GYRO_INCR_SCALE;
-        }
-    }())
-    , acc_scale_([=] {
-        switch (acc_o)
-        {
-          case AccOutputUnit::ACCELERATION:          // units are in m/s^2
-          case AccOutputUnit::AVERAGE_ACCELERATION:  // units are in m/s^2
-            return ACC_SCALE;
-          case AccOutputUnit::INCREMENTAL_VELOCITY:  // units are in m/s/sample
-            return ACC_INCR_SCALE;
-        }
-    }())
-    ,incl_scale_([=] {
-        switch (incl_o)
-        {
-          case InclOutputUnit::ACCELERATION:          // units are in m/s^2
-          case InclOutputUnit::AVERAGE_ACCELERATION:  // units are in m/s^2
-            return INCL_SCALE;
-          case InclOutputUnit::INCREMENTAL_VELOCITY:  // units are in m/s/sample
-            return INCL_INCR_SCALE;
-        }
-    }())
+    switch (gyro_o)
+    {
+      case GyroOutputUnit::ANGULAR_RATE:          // units are in rad/s
+      case GyroOutputUnit::AVERAGE_ANGULAR_RATE:  // units are in rad/s
+        return GYRO_SCALE;
+      case GyroOutputUnit::INCREMENTAL_ANGLE:  // units are in rad/sample
+      case GyroOutputUnit::INTEGRATED_ANGLE:   // units are in rad
+        return GYRO_INCR_SCALE;
+    }
+  }())
+  , acc_scale_([=] {
+    switch (acc_o)
+    {
+      case AccOutputUnit::ACCELERATION:          // units are in m/s^2
+      case AccOutputUnit::AVERAGE_ACCELERATION:  // units are in m/s^2
+        return ACC_SCALE;
+      case AccOutputUnit::INCREMENTAL_VELOCITY:  // units are in m/s/sample
+        return ACC_INCR_SCALE;
+    }
+  }())
+  , incl_scale_([=] {
+    switch (incl_o)
+    {
+      case InclOutputUnit::ACCELERATION:          // units are in m/s^2
+      case InclOutputUnit::AVERAGE_ACCELERATION:  // units are in m/s^2
+        return INCL_SCALE;
+      case InclOutputUnit::INCREMENTAL_VELOCITY:  // units are in m/s/sample
+        return INCL_INCR_SCALE;
+    }
+  }())
 {
 }
 
 uint8_t DatagramParser::getDatagramSize() const
 {
-  uint8_t n_inertial_sensors{1};
+  uint8_t n_inertial_sensors{ 1 };
   n_inertial_sensors += is_included_[SensorIndx::ACC] ? 1 : 0;
   n_inertial_sensors += is_included_[SensorIndx::INCL] ? 1 : 0;
 
-  uint8_t size{0};
+  uint8_t size{ 0 };
   size += N_BYTES_DATAGRAM_ID;
-  size += n_inertial_sensors*(3*N_BYTES_INERTIAL_SENSOR + N_BYTES_STATUS);
-  size += is_included_[SensorIndx::TEMP] ? n_inertial_sensors*(3*N_BYTES_TEMP_SENSOR + N_BYTES_STATUS) : 0;
+  size += n_inertial_sensors * (3 * N_BYTES_INERTIAL_SENSOR + N_BYTES_STATUS);
+  size += is_included_[SensorIndx::TEMP] ? n_inertial_sensors * (3 * N_BYTES_TEMP_SENSOR + N_BYTES_STATUS) : 0;
   size += is_included_[SensorIndx::AUX] ? N_BYTES_AUX_SENSOR + N_BYTES_STATUS : 0;
   size += N_BYTES_COUNTER;
   size += N_BYTES_LATENCY;
@@ -62,7 +63,6 @@ uint8_t DatagramParser::getDatagramSize() const
   return size;
 }
 
-
 bool DatagramParser::parseDatagram(std::vector<uint8_t>::iterator& buffer_itr, SensorData& sensor_data) const
 {
   uint8_t status{ 0 };
@@ -70,52 +70,52 @@ bool DatagramParser::parseDatagram(std::vector<uint8_t>::iterator& buffer_itr, S
   if (is_included_[SensorIndx::GYRO])
   {
     for (auto& gyro : sensor_data.gyro)
-      gyro = gyro_scale_ * parse(buffer_itr, N_BYTES_INERTIAL_SENSOR);
-    status += parse(buffer_itr, N_BYTES_STATUS);
+      gyro = gyro_scale_ * parseTwosComplement(buffer_itr, N_BYTES_INERTIAL_SENSOR);
+    status += parseUnsigned(buffer_itr, N_BYTES_STATUS);
   }
   if (is_included_[SensorIndx::ACC])
   {
     for (auto& acc : sensor_data.acc)
-      acc = acc_scale_ * parse(buffer_itr, N_BYTES_INERTIAL_SENSOR);
-    status += parse(buffer_itr, N_BYTES_STATUS);
+      acc = acc_scale_ * parseTwosComplement(buffer_itr, N_BYTES_INERTIAL_SENSOR);
+    status += parseUnsigned(buffer_itr, N_BYTES_STATUS);
   }
   if (is_included_[SensorIndx::INCL])
   {
     for (auto& incl : sensor_data.incl)
-      incl = incl_scale_ * parse(buffer_itr, N_BYTES_INERTIAL_SENSOR);
-    status += parse(buffer_itr, N_BYTES_STATUS);
+      incl = incl_scale_ * parseTwosComplement(buffer_itr, N_BYTES_INERTIAL_SENSOR);
+    status += parseUnsigned(buffer_itr, N_BYTES_STATUS);
   }
   if (is_included_[SensorIndx::TEMP])
   {
     if (is_included_[SensorIndx::GYRO])
     {
       for (auto& temp : sensor_data.temp_gyro)
-        temp = TEMP_SCALE*parse(buffer_itr, N_BYTES_TEMP_SENSOR);
-      status += parse(buffer_itr, N_BYTES_STATUS);
+        temp = TEMP_SCALE * parseTwosComplement(buffer_itr, N_BYTES_TEMP_SENSOR);
+      status += parseUnsigned(buffer_itr, N_BYTES_STATUS);
     }
     if (is_included_[SensorIndx::ACC])
     {
       for (auto& temp : sensor_data.temp_acc)
-        temp = TEMP_SCALE*parse(buffer_itr, N_BYTES_TEMP_SENSOR);
-      status += parse(buffer_itr, N_BYTES_STATUS);
+        temp = TEMP_SCALE * parseTwosComplement(buffer_itr, N_BYTES_TEMP_SENSOR);
+      status += parseUnsigned(buffer_itr, N_BYTES_STATUS);
     }
     if (is_included_[SensorIndx::INCL])
     {
       for (auto& temp : sensor_data.temp_incl)
-        temp = TEMP_SCALE*parse(buffer_itr, N_BYTES_TEMP_SENSOR);
-      status += parse(buffer_itr, N_BYTES_STATUS);
+        temp = TEMP_SCALE * parseTwosComplement(buffer_itr, N_BYTES_TEMP_SENSOR);
+      status += parseUnsigned(buffer_itr, N_BYTES_STATUS);
     }
   }
   if (is_included_[SensorIndx::AUX])
   {
-    sensor_data.aux = AUX_SCALE*parse(buffer_itr,N_BYTES_AUX_SENSOR);
-    status += parse(buffer_itr, N_BYTES_STATUS);
+    sensor_data.aux = AUX_SCALE * parseTwosComplement(buffer_itr, N_BYTES_AUX_SENSOR);
+    status += parseUnsigned(buffer_itr, N_BYTES_STATUS);
   }
-  sensor_data.counter = parse(buffer_itr,N_BYTES_COUNTER);
+  sensor_data.counter = parseUnsigned(buffer_itr, N_BYTES_COUNTER);
 
-  sensor_data.latency_us = parse(buffer_itr,N_BYTES_LATENCY);
+  sensor_data.latency_us = parseUnsigned(buffer_itr, N_BYTES_LATENCY);
 
-  sensor_data.crc = parse(buffer_itr,N_BYTES_CRC);
+  sensor_data.crc = parseUnsigned(buffer_itr, N_BYTES_CRC);
 
   return status == 0;
 }
@@ -124,7 +124,7 @@ constexpr std::array<bool, 5> DatagramParser::isIncluded(DatagramIdentifier data
 {
   switch (datagram_identifier)
   {
-    //rate,  acc, incl, temp,  aux
+    // rate,  acc, incl, temp,  aux
     case DatagramIdentifier::RATE:
       return { true, false, false, false, false };
     case DatagramIdentifier::RATE_ACC:
@@ -165,5 +165,3 @@ constexpr std::array<bool, 5> DatagramParser::isIncluded(DatagramIdentifier data
       throw std::out_of_range("Undefined datagram identifier");
   }
 }
-
-
