@@ -24,7 +24,8 @@ pkg_check_modules(SERIAL libserial)
 add_library(DriverStim300
         src/driver_stim300.cpp
         src/datagram_parser.cpp
-        src/serial_libserial.cpp)
+        src/serial_libserial.cpp
+        src/serial_unix.cpp)
 
 target_compile_features(DriverStim300 PRIVATE cxx_std_17)
 
