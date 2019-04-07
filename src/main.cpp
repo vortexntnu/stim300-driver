@@ -5,7 +5,6 @@
 #include <chrono>
 #include "driver_stim300.h"
 #include "serial_unix.h"
-#include "serial_libserial.h"
 
 int main()
 {

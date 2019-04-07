@@ -1,13 +1,10 @@
-//
-// Created by andreas on 21.03.19.
-//
 
 #ifndef DRIVER_STIM300_DRIVER_STIM300_H
 #define DRIVER_STIM300_DRIVER_STIM300_H
 
 #include <boost/crc.hpp>
 #include "../src/datagram_parser.h"
-#include "../src/serial_libserial.h"
+#include "../src/serial_driver.h"
 #include <array>
 #include <vector>
 
