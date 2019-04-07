@@ -1,11 +1,8 @@
 #ifndef DRIVER_STIM300_STIM300_CONSTANTS_H
 #define DRIVER_STIM300_STIM300_CONSTANTS_H
 
-
 #include <cstdint>
 #include <math.h>
-#include <array>
-#include <assert.h>
 
 namespace stim_300
 {
@@ -86,10 +83,9 @@ enum class InclOutputUnit : uint8_t
   INCREMENTAL_VELOCITY
 };
 
-
 constexpr uint8_t datagramIdentifierToRaw(DatagramIdentifier d_id)
 {
-  return static_cast<uint8_t >(d_id);
+  return static_cast<uint8_t>(d_id);
 }
 
 constexpr DatagramIdentifier rawToDatagramIdentifier(uint8_t datagram_id)
@@ -180,5 +176,5 @@ constexpr uint8_t numberOfPaddingBytes(DatagramIdentifier datagram_identifier)
   }
 }
 
-}
-#endif //DRIVER_STIM300_STIM300_CONSTANTS_H
+}  // namespace stim_300
+#endif  // DRIVER_STIM300_STIM300_CONSTANTS_H

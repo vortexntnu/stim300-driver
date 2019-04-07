@@ -5,8 +5,8 @@
 #include <boost/crc.hpp>
 #include "../src/datagram_parser.h"
 #include "../src/serial_driver.h"
-#include <array>
 #include <vector>
+#include <assert.h>
 
 class DriverStim300
 {
@@ -43,7 +43,6 @@ private:
 
   SerialDriver& serial_driver_;
   uint16_t serial_read_timeout_ms_;
-  static constexpr uint8_t BUFFER_SIZE_{ stim_300::MAX_DATAGRAM_SIZE * 2 };
   std::vector<uint8_t> buffer_;
   size_t n_read_bytes_;
   bool in_sync_;

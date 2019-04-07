@@ -1,10 +1,5 @@
-//
-// Created by andreas on 21.03.19.
-//
 
-#include <iostream>
 #include "driver_stim300.h"
-#include <bitset>
 
 DriverStim300::DriverStim300(SerialDriver& serial_driver, stim_300::DatagramIdentifier datagram_id,
                              stim_300::GyroOutputUnit gyro_output_unit, stim_300::AccOutputUnit acc_output_unit,
@@ -84,15 +79,15 @@ bool DriverStim300::processPacket()
 {
   if (this->mode_ == Mode::Normal)
   {
-    // Read from buffer until we find a datagram identifyer,
-    // then read the amount of bytes one datagram should contain,
-    // then parse that datagram.
+    // Read from buffer until we find a datagram identifyer.
+    // Read the amount of bytes one datagram should contain.
+    // Parse that datagram.
     // TODO: Make this code section cleaner
 
     // begin codesection
 
     uint8_t byte;
-    while (serial_driver_.readByte(byte, serial_read_timeout_ms_))
+    while (serial_driver_.readByte(byte))
     {
       if (byte == stim_300::datagramIdentifierToRaw(datagram_id_))
       {
@@ -147,9 +142,9 @@ bool DriverStim300::processPacket()
   }
   else if (this->mode_ == Mode::Service)
   {
-    std::string s(buffer_.begin(), buffer_.end());
-    std::cout << s << "\n";
-    return true;
+    // std::string s(buffer_.begin(), buffer_.end());
+    // std::cout << s << "\n";
+    return false;
   }
 
   return false;

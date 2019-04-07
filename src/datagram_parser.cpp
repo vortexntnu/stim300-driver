@@ -1,6 +1,3 @@
-//
-// Created by andreas on 25.03.19.
-//
 
 #include "datagram_parser.h"
 

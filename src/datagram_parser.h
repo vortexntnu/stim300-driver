@@ -1,6 +1,3 @@
-//
-// Created by andreas on 21.03.19.
-//
 
 #ifndef DRIVER_STIM300_DATAGRAM_PARSER_H
 #define DRIVER_STIM300_DATAGRAM_PARSER_H
@@ -8,7 +5,6 @@
 #include <vector>
 #include <cstdint>
 #include <array>
-#include <math.h>
 #include "stim300_constants.h"
 
 namespace stim_300
@@ -49,7 +45,6 @@ private:
   constexpr std::array<bool, 5> isIncluded(DatagramIdentifier datagram_identifier) const;
   std::array<bool, 5> is_included_;
   bool use_termination_;
-
 
   // Meta data is stored as "unsigned word", we simply combine the bytes into the right
   // sized uint by left shifting them. Note the biggest is the CRC which is 32 bits.
