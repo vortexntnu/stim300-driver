@@ -1,8 +1,11 @@
-## STIM 300
+### STIM 300
 https://www.sensonor.com/products/inertial-measurement-units/stim300/
 
+Run with:
 
-## Communicate with STIM300 over terminal
+    roslaunch driver_stim300 stim300_driver.launch
+
+#### Communicate with STIM300 over terminal
 For testing and configuration during development it can be useful to comunicate with the STIM300 IMU directly over terminal. 
 Here is a simple example for how to that using minicom.
 
