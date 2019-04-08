@@ -27,7 +27,7 @@ struct DatagramParser
 {
   DatagramParser(DatagramIdentifier dg_id, GyroOutputUnit gyro_o, AccOutputUnit acc_o, InclOutputUnit incl_o);
   uint8_t getDatagramSize() const;
-  bool parseDatagram(std::vector<uint8_t>::iterator& buffer_itr, SensorData& sensor_data) const;
+  bool parseDatagram(std::vector<uint8_t>::const_iterator& buffer_itr, SensorData& sensor_data) const;
 
 private:
   enum SensorIndx
@@ -48,7 +48,7 @@ private:
 
   // Meta data is stored as "unsigned word", we simply combine the bytes into the right
   // sized uint by left shifting them. Note the biggest is the CRC which is 32 bits.
-  static constexpr uint32_t parseUnsigned(std::vector<uint8_t>::iterator& it, uint8_t size)
+  static constexpr uint32_t parseUnsigned(std::vector<uint8_t>::const_iterator& it, uint8_t size)
   {
     uint32_t tmp{ 0 };
     for (int i = 0; i < size; ++i)
@@ -62,7 +62,7 @@ private:
   // bu we shift them to fill up the int32_t type then we shift them back to their right
   // position. When we shift them back the shift operator will automatically sign-extend the
   // value.
-  static constexpr int32_t parseTwosComplement(std::vector<uint8_t>::iterator& it, uint8_t size)
+  static constexpr int32_t parseTwosComplement(std::vector<uint8_t>::const_iterator& it, uint8_t size)
   {
     if (size == 3)
     {

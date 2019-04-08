@@ -56,7 +56,7 @@ private:
   bool no_internal_error_;
 
   uint8_t crc_dummy_bytes_;
-  bool verifyChecksum(std::vector<uint8_t>::iterator begin, std::vector<uint8_t>::iterator end, uint32_t& expected_CRC);
+  bool verifyChecksum(std::vector<uint8_t>::const_iterator begin, std::vector<uint8_t>::const_iterator end, uint32_t& expected_CRC);
 };
 
 #endif  // DRIVER_STIM300_DRIVER_STIM300_H

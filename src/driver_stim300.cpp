@@ -124,7 +124,7 @@ bool DriverStim300::processPacket()
     }
 
     // std::cout<<"N read bytes: "<<n_read_bytes_<<std::endl;
-    auto begin = buffer_.begin();
+    auto begin = buffer_.cbegin();
     auto it = std::next(begin);
 
     if (*begin != stim_300::datagramIdentifierToRaw(datagram_id_))
@@ -150,7 +150,7 @@ bool DriverStim300::processPacket()
   return false;
 }
 
-bool DriverStim300::verifyChecksum(std::vector<uint8_t>::iterator begin, std::vector<uint8_t>::iterator end,
+bool DriverStim300::verifyChecksum(std::vector<uint8_t>::const_iterator begin, std::vector<uint8_t>::const_iterator end,
                                    uint32_t& expected_CRC)
 {
   assert(datagram_size_ == (end - begin));

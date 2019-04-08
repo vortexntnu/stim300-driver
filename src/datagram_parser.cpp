@@ -60,7 +60,7 @@ uint8_t DatagramParser::getDatagramSize() const
   return size;
 }
 
-bool DatagramParser::parseDatagram(std::vector<uint8_t>::iterator& buffer_itr, SensorData& sensor_data) const
+bool DatagramParser::parseDatagram(std::vector<uint8_t>::const_iterator& buffer_itr, SensorData& sensor_data) const
 {
   uint8_t status{ 0 };
 
