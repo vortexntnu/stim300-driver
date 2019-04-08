@@ -2,16 +2,6 @@ sudo: required
 cache:
   - apt
 
-# Build all valid Ubuntu/ROS combinations available on Travis VMs.
-language: generic
-matrix:
-  include:
-  - name: "Xenial kinetic"
-    dist: xenial
-    env: ROS_DISTRO=kinetic
-
-# Configuration variables. All variables are global now, but this can be used to
-# trigger a build matrix for different ROS distributions if desired.
 env:
   global:
     - ROS_CI_DESKTOP="`lsb_release -cs`"  # e.g. [precise|trusty|...]
@@ -27,6 +17,8 @@ env:
 
 # Install system dependencies, namely a very barebones ROS setup.
 before_install:
+  - pwd
+  - echo $CI_SOURCE_PATH
   - sudo sh -c "echo \"deb http://packages.ros.org/ros/ubuntu $ROS_CI_DESKTOP main\" > /etc/apt/sources.list.d/ros-latest.list"
   - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key 421C365BD9FF1F717815A3895523BAEEB01FA116
   - sudo apt-get update -qq
