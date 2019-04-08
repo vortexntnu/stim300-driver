@@ -1,4 +1,4 @@
-## STIM 300
+# STIM 300
 https://www.sensonor.com/products/inertial-measurement-units/stim300/
 
 
