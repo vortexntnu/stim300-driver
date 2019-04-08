@@ -21,9 +21,9 @@ public:
 
   void close() override;
 
-  void writeByte(uint8_t byte);
+  void writeByte(uint8_t byte) override;
 
-  bool readByte(uint8_t& byte, unsigned int ms_timeout) override;
+  bool readByte(uint8_t& byte) override;
 
 private:
   int file_handle_;

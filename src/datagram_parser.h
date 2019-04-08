@@ -1,6 +1,3 @@
-//
-// Created by andreas on 21.03.19.
-//
 
 #ifndef DRIVER_STIM300_DATAGRAM_PARSER_H
 #define DRIVER_STIM300_DATAGRAM_PARSER_H
@@ -8,7 +5,6 @@
 #include <vector>
 #include <cstdint>
 #include <array>
-#include <math.h>
 #include "stim300_constants.h"
 
 namespace stim_300
@@ -30,30 +26,19 @@ struct SensorData
 struct DatagramParser
 {
   DatagramParser(DatagramIdentifier dg_id, GyroOutputUnit gyro_o, AccOutputUnit acc_o, InclOutputUnit incl_o);
-  uint8_t getDatagramSize() const;
-  bool parseDatagram(std::vector<uint8_t>::iterator& buffer_itr, SensorData& sensor_data) const;
+  bool parseDatagram(std::vector<uint8_t>::const_iterator& buffer_itr, SensorData& sensor_data) const;
 
 private:
-  enum SensorIndx
-  {
-    GYRO = 0,
-    ACC,
-    INCL,
-    TEMP,
-    AUX
-  };
+
   double gyro_scale_;
   double acc_scale_;
   double incl_scale_;
 
-  constexpr std::array<bool, 5> isIncluded(DatagramIdentifier datagram_identifier) const;
-  std::array<bool, 5> is_included_;
-  bool use_termination_;
-
+  const std::array<bool, 5> is_included_;
 
   // Meta data is stored as "unsigned word", we simply combine the bytes into the right
   // sized uint by left shifting them. Note the biggest is the CRC which is 32 bits.
-  static constexpr uint32_t parseUnsigned(std::vector<uint8_t>::iterator& it, uint8_t size)
+  static const uint32_t parseUnsigned(std::vector<uint8_t>::const_iterator& it, uint8_t size)
   {
     uint32_t tmp{ 0 };
     for (int i = 0; i < size; ++i)
@@ -67,7 +52,7 @@ private:
   // bu we shift them to fill up the int32_t type then we shift them back to their right
   // position. When we shift them back the shift operator will automatically sign-extend the
   // value.
-  static constexpr int32_t parseTwosComplement(std::vector<uint8_t>::iterator& it, uint8_t size)
+  static const int32_t parseTwosComplement(std::vector<uint8_t>::const_iterator& it, uint8_t size)
   {
     if (size == 3)
     {

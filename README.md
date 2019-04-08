@@ -1,12 +1,17 @@
+[![Build Status](https://travis-ci.com/vortexntnu/stim300.svg?branch=master)](https://travis-ci.com/vortexntnu/stim300)
+
 # STIM 300
 https://www.sensonor.com/products/inertial-measurement-units/stim300/
 
+Run with:
+
+    roslaunch driver_stim300 stim300_driver.launch
 
 ## Communicate with STIM300 over terminal
-For testing and configuration during development it can be useful to comunicate with the STIM300 IMU directly over terminal. 
+For testing and configuration during development it can be useful to comunicate with the STIM300 IMU directly over terminal.
 Here is a simple example for how to that using minicom.
 
-Install minicom: 
+Install minicom:
 
     sudo apt-get install minicom
 
@@ -28,7 +33,7 @@ Serial port setup:
 
 Modem and dialing: (Clear option A...I)
 
-    A - 
+    A -
     * -
     * -
     * -
@@ -51,12 +56,12 @@ Enter service mode: write "SERVICEMODE" and press enter
 Clear the screen:
 
     Ctrl-A c
-    
+
 If the incomming datagram feed stopped it means you enter service mode sucsessfully. While in service mode the stim 300 will comunicate with asci characters. Exit minicom and enter in normal ASCI mode:
 
     Ctrl-A x
     sudo minicom
-   
+
 Write ? and press enter, and the STIM300 should send info about available commands
 
     ?
@@ -64,5 +69,5 @@ Write ? and press enter, and the STIM300 should send info about available comman
 This will show a list on available commands including how to go back to normal mode. For example:
 
     c
-    
+
  will perform a system check.

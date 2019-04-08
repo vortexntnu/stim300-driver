@@ -1,10 +1,5 @@
-//
-// Created by andreas on 21.03.19.
-//
 
-#include <iostream>
 #include "driver_stim300.h"
-#include <bitset>
 
 DriverStim300::DriverStim300(SerialDriver& serial_driver, stim_300::DatagramIdentifier datagram_id,
                              stim_300::GyroOutputUnit gyro_output_unit, stim_300::AccOutputUnit acc_output_unit,
@@ -21,9 +16,9 @@ DriverStim300::DriverStim300(SerialDriver& serial_driver, stim_300::DatagramIden
   , crc_dummy_bytes_(stim_300::numberOfPaddingBytes(datagram_id))
   , sensor_data_()
   , datagram_parser_(datagram_id, gyro_output_unit, acc_output_unit, incl_output_unit)
+  , datagram_size_(stim_300::calculateDatagramSize(datagram_id))
 {
   serial_driver_.open(baudrate);
-  datagram_size_ = datagram_parser_.getDatagramSize();
 }
 
 DriverStim300::~DriverStim300()
@@ -84,15 +79,15 @@ bool DriverStim300::processPacket()
 {
   if (this->mode_ == Mode::Normal)
   {
-    // Read from buffer until we find a datagram identifyer,
-    // then read the amount of bytes one datagram should contain,
-    // then parse that datagram.
+    // Read from buffer until we find a datagram identifyer.
+    // Read the amount of bytes one datagram should contain.
+    // Parse that datagram.
     // TODO: Make this code section cleaner
 
     // begin codesection
 
     uint8_t byte;
-    while (serial_driver_.readByte(byte, serial_read_timeout_ms_))
+    while (serial_driver_.readByte(byte))
     {
       if (byte == stim_300::datagramIdentifierToRaw(datagram_id_))
       {
@@ -129,7 +124,7 @@ bool DriverStim300::processPacket()
     }
 
     // std::cout<<"N read bytes: "<<n_read_bytes_<<std::endl;
-    auto begin = buffer_.begin();
+    auto begin = buffer_.cbegin();
     auto it = std::next(begin);
 
     if (*begin != stim_300::datagramIdentifierToRaw(datagram_id_))
@@ -147,15 +142,15 @@ bool DriverStim300::processPacket()
   }
   else if (this->mode_ == Mode::Service)
   {
-    std::string s(buffer_.begin(), buffer_.end());
-    std::cout << s << "\n";
-    return true;
+    // std::string s(buffer_.begin(), buffer_.end());
+    // std::cout << s << "\n";
+    return false;
   }
 
   return false;
 }
 
-bool DriverStim300::verifyChecksum(std::vector<uint8_t>::iterator begin, std::vector<uint8_t>::iterator end,
+bool DriverStim300::verifyChecksum(std::vector<uint8_t>::const_iterator begin, std::vector<uint8_t>::const_iterator end,
                                    uint32_t& expected_CRC)
 {
   assert(datagram_size_ == (end - begin));

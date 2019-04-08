@@ -8,6 +8,15 @@
 SerialUnix::SerialUnix(const std::string& serial_port_name)
 {
   file_handle_ = ::open(serial_port_name.data(), O_RDWR | O_NOCTTY | O_NDELAY);
+}
+
+SerialUnix::~SerialUnix()
+{
+  close();
+}
+
+void SerialUnix::open(BAUDRATE baudrate)
+{
   if (file_handle_ == -1)
   {
     throw std::runtime_error{ "Failed to open port" };
@@ -73,15 +82,6 @@ SerialUnix::SerialUnix(const std::string& serial_port_name)
   //
   config_.c_cc[VMIN] = 1;
   config_.c_cc[VTIME] = 0;
-}
-
-SerialUnix::~SerialUnix()
-{
-  close();
-}
-
-void SerialUnix::open(BAUDRATE baudrate)
-{
   //
   // Communication speed (simple version, using the predefined
   // constants)
@@ -92,8 +92,8 @@ void SerialUnix::open(BAUDRATE baudrate)
     case BAUDRATE::BAUD_115200:  // 115200:
       failure = (cfsetispeed(&config_, B115200) < 0 || cfsetospeed(&config_, B115200) < 0);
       break;
-    case BAUDRATE::BAUD_57600:  // 460800:
-      failure = (cfsetispeed(&config_, B460800) < 0 || cfsetospeed(&config_, B460800) < 0);
+    case BAUDRATE::BAUD_57600:  // 57600:
+      failure = (cfsetispeed(&config_, B57600) < 0 || cfsetospeed(&config_, B57600) < 0);
       break;
     case BAUDRATE::BAUD_921600:  // 921600:
       failure = (cfsetispeed(&config_, B921600) < 0 || cfsetospeed(&config_, B921600) < 0);
@@ -111,7 +111,7 @@ void SerialUnix::open(BAUDRATE baudrate)
   //
   if (tcsetattr(file_handle_, TCSAFLUSH, &config_) < 0)
   {
-    throw std::runtime_error{ "Could not apply settings" };
+    throw std::runtime_error{ "Could not apply serial settings" };
   }
 }
 
@@ -125,92 +125,7 @@ void SerialUnix::writeByte(uint8_t byte)
   ::write(file_handle_, &byte, 1);
 }
 
-bool SerialUnix::readByte(uint8_t& byte, unsigned int ms_timeout)
+bool SerialUnix::readByte(uint8_t& byte)
 {
   return (read(file_handle_, &byte, 1) > 0);
 }
-
-// void SerialUnix::open(BAUDRATE baudrate)
-//{
-//  struct termios options;
-//
-//  FD_WES_ = ::open(serial_port_name_.data(), O_RDWR | O_NONBLOCK | O_NOCTTY | O_NDELAY);
-//  if (FD_WES_ == -1)
-//  {
-//    return;
-//  }
-//
-//  bzero(&options, sizeof(options));  //?
-//
-//  options.c_cflag |= (CLOCAL | CREAD);
-//  options.c_cflag &= ~CSIZE;  // the bitmask
-//
-//  // Set the baudrate
-//  switch (baudrate)
-//  {
-//    case BAUDRATE::BAUD_115200:  // 115200:
-//      cfsetispeed(&options, B115200);
-//      cfsetospeed(&options, B115200);
-//      break;
-//    case BAUDRATE::BAUD_57600:  // 460800:
-//      cfsetispeed(&options, B460800);
-//      cfsetospeed(&options, B460800);
-//      break;
-//    case BAUDRATE::BAUD_921600:  // 921600:
-//      cfsetispeed(&options, B921600);
-//      cfsetospeed(&options, B921600);
-//      break;
-//    default:
-//      cfsetispeed(&options, B460800);
-//      cfsetospeed(&options, B460800);
-//  }
-//
-//  options.c_cflag |= CS8;  // 8 data bits
-//
-//  options.c_cflag &= ~PARENB;
-//  options.c_iflag &= ~INPCK;  // no parity check
-//
-//  options.c_cflag &= ~CSTOPB;  // one stop bit
-//
-//  options.c_cc[VTIME] = 0;  // waiting time for reading every bit
-//  options.c_cc[VMIN] = 0;   // minimum bit(s) to readChunk
-//
-//  options.c_lflag &= ~(ICANON | ECHO | ISIG);
-//
-//  tcflush(0, TCIOFLUSH);
-//
-//  // activate the configuration
-//  if ((tcsetattr(FD_WES_, TCSANOW, &options)) != 0)
-//  {
-//    cout << "com setup error!" << endl;
-//    return;
-//  }
-//  else
-//  {
-//    cout << "com setup succeeded!" << endl;
-//    return;
-//  }
-//}
-//
-// bool SerialUnix::readByte(uint8_t& byte, unsigned int ms_timeout)
-//{
-//  uint8_t* buff;
-//  if (read(FD_WES_, buff, 1) and buff != nullptr)
-//  {
-//    byte = *buff;
-//    return true;
-//  }
-//  return false;
-//}
-//
-// void SerialUnix::close()
-//{
-//}
-// SerialUnix::~SerialUnix()
-//{
-//  close();
-//}
-//
-// void SerialUnix::write(const std::vector<unsigned char>& data_buffer)
-//{
-//}

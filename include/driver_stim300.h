@@ -3,10 +3,11 @@
 #define DRIVER_STIM300_DRIVER_STIM300_H
 
 #include <boost/crc.hpp>
+#include "../src/stim300_constants.h"
 #include "../src/datagram_parser.h"
 #include "../src/serial_driver.h"
-#include <array>
 #include <vector>
+#include <assert.h>
 
 class DriverStim300
 {
@@ -43,7 +44,6 @@ private:
 
   SerialDriver& serial_driver_;
   uint16_t serial_read_timeout_ms_;
-  static constexpr uint8_t BUFFER_SIZE_{ stim_300::MAX_DATAGRAM_SIZE * 2 };
   std::vector<uint8_t> buffer_;
   size_t n_read_bytes_;
   bool in_sync_;
@@ -57,7 +57,7 @@ private:
   bool no_internal_error_;
 
   uint8_t crc_dummy_bytes_;
-  bool verifyChecksum(std::vector<uint8_t>::iterator begin, std::vector<uint8_t>::iterator end, uint32_t& expected_CRC);
+  bool verifyChecksum(std::vector<uint8_t>::const_iterator begin, std::vector<uint8_t>::const_iterator end, uint32_t& expected_CRC);
 };
 
 #endif  // DRIVER_STIM300_DRIVER_STIM300_H
