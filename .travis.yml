@@ -5,7 +5,7 @@ cache:
 env:
   global:
     - ROS_CI_DESKTOP="`lsb_release -cs`"  # e.g. [precise|trusty|...]
-    - CI_SOURCE_PATH=$(pwd)
+    - CI_SOURCE_PATH=$(pwd)/..
     - ROSINSTALL_FILE=$CI_SOURCE_PATH/dependencies.rosinstall
     - CATKIN_BLACKLIST=$CI_SOURCE_PATH/catkin.blacklist
     - ROS_PARALLEL_JOBS='-j8 -l6'
@@ -18,7 +18,8 @@ env:
 # Install system dependencies, namely a very barebones ROS setup.
 before_install:
   - pwd
-  - echo $CI_SOURCE_PATH
+  - ls ..
+  - ls
   - sudo sh -c "echo \"deb http://packages.ros.org/ros/ubuntu $ROS_CI_DESKTOP main\" > /etc/apt/sources.list.d/ros-latest.list"
   - sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key 421C365BD9FF1F717815A3895523BAEEB01FA116
   - sudo apt-get update -qq
