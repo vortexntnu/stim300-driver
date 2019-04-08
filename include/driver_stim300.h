@@ -3,6 +3,7 @@
 #define DRIVER_STIM300_DRIVER_STIM300_H
 
 #include <boost/crc.hpp>
+#include "../src/stim300_constants.h"
 #include "../src/datagram_parser.h"
 #include "../src/serial_driver.h"
 #include <vector>

@@ -16,9 +16,9 @@ DriverStim300::DriverStim300(SerialDriver& serial_driver, stim_300::DatagramIden
   , crc_dummy_bytes_(stim_300::numberOfPaddingBytes(datagram_id))
   , sensor_data_()
   , datagram_parser_(datagram_id, gyro_output_unit, acc_output_unit, incl_output_unit)
+  , datagram_size_(stim_300::calculateDatagramSize(datagram_id))
 {
   serial_driver_.open(baudrate);
-  datagram_size_ = datagram_parser_.getDatagramSize();
 }
 
 DriverStim300::~DriverStim300()

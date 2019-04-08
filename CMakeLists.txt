@@ -28,9 +28,6 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_executable(stim300_driver_node src/stim300_driver_node.cpp)
 target_include_directories(stim300_driver_node
-        PUBLIC
-        $<INSTALL_INTERFACE:include>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         PRIVATE
         ${catkin_INCLUDE_DIRS})
 target_link_libraries(stim300_driver_node PRIVATE stim300_driver_lib ${catkin_LIBRARIES})
