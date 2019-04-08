@@ -12,7 +12,7 @@ matrix:
 env:
   global:
     - ROS_CI_DESKTOP="`lsb_release -cs`"  # e.g. [precise|trusty|...]
-    - CI_SOURCE_PATH=$(pwd)/..
+    - CI_SOURCE_PATH=$(dirname $(pwd))
     - ROSINSTALL_FILE=$CI_SOURCE_PATH/dependencies.rosinstall
     - CATKIN_BLACKLIST=$CI_SOURCE_PATH/catkin.blacklist
     - ROS_PARALLEL_JOBS='-j8 -l6'
