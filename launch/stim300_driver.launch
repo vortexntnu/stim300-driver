@@ -1,0 +1,11 @@
+<launch>
+
+  <node name="stim300driver" pkg="drivers-imu_stim300" type="stim300" args="/dev/ttyUSB0" />
+
+  
+  <param name = "stanard_deviation_of_gyro" value="0.0004" type="double" />
+  <param name = "stanard_deviation_of_acc" value="0.0004" type="double" />
+  <param name = "sample_rate" value="0.0004" type="double" />	
+
+ 
+</launch>
