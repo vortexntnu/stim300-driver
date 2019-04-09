@@ -5,7 +5,13 @@ https://www.sensonor.com/products/inertial-measurement-units/stim300/
 
 Run with:
 
+    rosrun driver_stim300 stim300_driver_node
+
+or
+
     roslaunch driver_stim300 stim300_driver.launch
+    
+see launch file for available parameters.
 
 ## Communicate with STIM300 over terminal
 For testing and configuration during development it can be useful to comunicate with the STIM300 IMU directly over terminal.

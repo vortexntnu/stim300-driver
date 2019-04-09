@@ -24,7 +24,9 @@ find_package(catkin REQUIRED COMPONENTS
         roscpp
         sensor_msgs
         )
-
+catkin_package(
+        CATKIN_DEPENDS sensor_msgs
+)
 
 add_executable(stim300_driver_node src/stim300_driver_node.cpp)
 target_include_directories(stim300_driver_node
