@@ -1,7 +1,6 @@
 
 #include "mock_serial_driver.h"
 #include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "../include/driver_stim300.h"
 
 using ::testing::_;
@@ -20,7 +19,7 @@ TEST(DriverTest, Test1)
 
   EXPECT_CALL(serial_driver, open(_)).Times(1);
 
-  EXPECT_CALL(serial_driver, readByte(_, _))
+  EXPECT_CALL(serial_driver, readByte(_))
       .Times(63)
       .WillRepeatedly(Invoke(&datagram_buffer, &DatagramBuffer::getNextByte));
 
