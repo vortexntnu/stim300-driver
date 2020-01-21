@@ -8,9 +8,8 @@
 #include "../src/serial_driver.h"
 #include <vector>
 
-using namespace stim_300;
 
-  enum class Status
+  enum class Stim300Status
   {
     NORMAL,
     NEW_MEASURMENT,
@@ -44,7 +43,7 @@ using namespace stim_300;
     bool isChecksumGood() const;
     bool isSensorStatusGood() const;
     uint8_t getInternalMeasurmentCounter() const;
-    Status update();
+    Stim300Status update();
 
   private:
     enum class Mode : uint8_t
@@ -68,16 +67,16 @@ using namespace stim_300;
     size_t n_new_bytes_;
 
     uint8_t datagram_id_;
-    DatagramParser datagram_parser_;
+    stim_300::DatagramParser datagram_parser_;
     uint8_t datagram_size_;
     uint8_t crc_dummy_bytes_;
 
-    SensorConfig sensor_config_;
-    SensorData sensor_data_;
+    stim_300::SensorConfig sensor_config_;
+    stim_300::SensorData sensor_data_;
     bool checksum_is_ok_;
     bool no_internal_error_;
 
-    Status readDataStream();
+    Stim300Status readDataStream();
     bool setDatagramFormat(DatagramIdentifier id);
     bool verifyChecksum(
         std::vector<uint8_t>::const_iterator begin,

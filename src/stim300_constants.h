@@ -5,7 +5,7 @@
 #include <math.h>
 #include <array>
 
-namespace stim_300
+namespace stim_const
 {
 static constexpr uint8_t N_BYTES_DATAGRAM_ID = 1;
 static constexpr uint8_t N_BYTES_INERTIAL_SENSOR = 3;
@@ -224,24 +224,24 @@ static constexpr double accIncrScale(AccRange acc_range)
   switch (acc_range)
   {
     case AccRange::G2:
-      return 1/powerOf2(24);
+      return 1.0/powerOf2(24);
     case AccRange::G5:
-      return 1/powerOf2(23);
+      return 1.0/powerOf2(23);
     case AccRange::G10:
-      return 1/powerOf2(22);
+      return 1.0/powerOf2(22);
     case AccRange::G30:
-      return 1/powerOf2(21);
+      return 1.0/powerOf2(21);
     case AccRange::G80:
-      return 1/powerOf2(19);
+      return 1.0/powerOf2(19);
   }
 }
 
 static constexpr double gyroIncrScale() {return (M_PI / 180.00) / powerOf2(21);}
 static constexpr double gyroScale() {return (M_PI / 180.00) / powerOf2(14);}
 static constexpr double inclScale() {return (STIM300_GRAVITY) / powerOf2(22);}
-static constexpr double inclIncrScale() {return 1 / powerOf2(25);}
-static constexpr double tempScale() {return 1 / powerOf2(8);}
+static constexpr double inclIncrScale() {return 1.0 / powerOf2(25);}
+static constexpr double tempScale() {return 1.0 / powerOf2(8);}
 static constexpr double auxScale() {return 5.0 / powerOf2(24);}
 
-}  // namespace stim_300
+}  // namespace stim_const
 #endif  // DRIVER_STIM300_STIM300_CONSTANTS_H

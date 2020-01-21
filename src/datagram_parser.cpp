@@ -1,6 +1,7 @@
 
 #include "datagram_parser.h"
 
+using namespace stim_const;
 using namespace stim_300;
 
 DatagramParser::DatagramParser(DatagramIdentifier dg_id, GyroOutputUnit gyro_o, AccOutputUnit acc_o,
