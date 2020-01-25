@@ -95,7 +95,7 @@ Stim300Status DriverStim300::readDataStream()
         {
           if (++n_checked_bytes > 100)
           {
-            std::cerr << "Not able to recognise datagram" << std::endl;
+            //std::cerr << "Not able to recognise datagram" << std::endl;
             if (read_config_from_sensor_)
               askForConfigDatagram();
             n_checked_bytes = 0;
@@ -103,7 +103,7 @@ Stim300Status DriverStim300::readDataStream()
           continue;
         }
         if (n_checked_bytes != 0)
-          std::cout << "Checked bytes: " << n_checked_bytes << std::endl;
+          //std::cout << "Checked bytes: " << n_checked_bytes << std::endl;
         n_checked_bytes = 0;
         reading_mode_ = ReadingMode::ReadingDatagram;
         buffer_.push_back(byte);
@@ -156,7 +156,7 @@ Stim300Status DriverStim300::readDataStream()
       // The "ID" was likely a byte happening to be equal the datagram id,
       // and not actually the start of a datagram, thus the buffer does
       // not contain a complete datagram.
-      std::cerr << "CRC error" << std::endl;
+      //std::cerr << "CRC error" << std::endl;
       reading_mode_ = ReadingMode::IdentifyingDatagram;
       return Stim300Status::NORMAL;
     }
@@ -173,7 +173,7 @@ Stim300Status DriverStim300::readDataStream()
       setDatagramFormat(sensor_config_.datagram_id);
       datagram_parser_.setDataParameters(sensor_config_);
       read_config_from_sensor_ = false;
-      std::cout << "Parsed config datagram" << std::endl;
+      //std::cout << "Parsed config datagram" << std::endl;
       reading_mode_ = ReadingMode::IdentifyingDatagram;
       return status;
     }
