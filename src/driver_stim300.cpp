@@ -2,11 +2,10 @@
 #include <iostream>
 #include "driver_stim300.h"
 
-
 DriverStim300::DriverStim300(SerialDriver& serial_driver, DatagramIdentifier datagram_id,
                              GyroOutputUnit gyro_output_unit, AccOutputUnit acc_output_unit,
-                             InclOutputUnit incl_output_unit, AccRange acc_range,
-                             SampleFreq freq, bool read_config_from_sensor) noexcept
+                             InclOutputUnit incl_output_unit, AccRange acc_range, SampleFreq freq,
+                             bool read_config_from_sensor) noexcept
   : serial_driver_(serial_driver)
   , datagram_id_(datagramIdentifierToRaw(datagram_id))
   , mode_(Mode::Init)
@@ -14,15 +13,13 @@ DriverStim300::DriverStim300(SerialDriver& serial_driver, DatagramIdentifier dat
   , n_new_bytes_(0)
   , sensor_status_(0)
   , crc_dummy_bytes_(numberOfPaddingBytes(datagram_id))
-  , sensor_config_{'0',0, freq, datagram_id, false,
-                   gyro_output_unit, acc_output_unit, incl_output_unit, acc_range}
+  , sensor_config_{ '0', 0, freq, datagram_id, false, gyro_output_unit, acc_output_unit, incl_output_unit, acc_range }
   , sensor_data_()
   , datagram_parser_(datagram_id, gyro_output_unit, acc_output_unit, incl_output_unit, acc_range)
   , datagram_size_(calculateDatagramSize(datagram_id))
   , read_config_from_sensor_(read_config_from_sensor)
 {
 }
-
 
 double DriverStim300::getAccX() const noexcept
 {
@@ -81,7 +78,7 @@ Stim300Status DriverStim300::readDataStream()
   {
     switch (reading_mode_)
     {
-      case ReadingMode::IdentifyingDatagram :
+      case ReadingMode::IdentifyingDatagram:
         if (byte == datagram_id_)
         {
           // Use current datagram format
@@ -98,22 +95,22 @@ Stim300Status DriverStim300::readDataStream()
         {
           if (++n_checked_bytes > 100)
           {
-            std::cerr<<"Not able to recognise datagram"<<std::endl;
-            if(read_config_from_sensor_)
+            std::cerr << "Not able to recognise datagram" << std::endl;
+            if (read_config_from_sensor_)
               askForConfigDatagram();
             n_checked_bytes = 0;
           }
           continue;
         }
         if (n_checked_bytes != 0)
-          std::cout<<"Checked bytes: "<<n_checked_bytes<<std::endl;
+          std::cout << "Checked bytes: " << n_checked_bytes << std::endl;
         n_checked_bytes = 0;
         reading_mode_ = ReadingMode::ReadingDatagram;
         buffer_.push_back(byte);
         n_new_bytes_ = 1;
         continue;
 
-      case ReadingMode::ReadingDatagram :
+      case ReadingMode::ReadingDatagram:
 
         // Circular buffer
         buffer_.push_back(byte);
@@ -121,20 +118,20 @@ Stim300Status DriverStim300::readDataStream()
         while (buffer_.size() > datagram_size_)
           buffer_.erase(buffer_.begin());
 
-        if(n_new_bytes_ < datagram_size_)
+        if (n_new_bytes_ < datagram_size_)
           continue;
 
         // else the buffer is filled with a potential new datagram
 
         if (sensor_config_.normal_datagram_CRLF or
-              datagram_id_ == datagramIdentifierToRaw(DatagramIdentifier::CONFIGURATION_CRLF))
+            datagram_id_ == datagramIdentifierToRaw(DatagramIdentifier::CONFIGURATION_CRLF))
         {
           reading_mode_ = ReadingMode::VerifyingDatagramCR;
           continue;
         }
         break;
 
-      case ReadingMode::VerifyingDatagramCR :
+      case ReadingMode::VerifyingDatagramCR:
 
         if (byte == 0x0D)
         {
@@ -144,7 +141,7 @@ Stim300Status DriverStim300::readDataStream()
         reading_mode_ = ReadingMode::IdentifyingDatagram;
         return Stim300Status::NORMAL;
 
-      case ReadingMode::VerifyingDatagramLF :
+      case ReadingMode::VerifyingDatagramLF:
 
         if (byte == 0x0A)
         {
@@ -152,14 +149,14 @@ Stim300Status DriverStim300::readDataStream()
         }
         reading_mode_ = ReadingMode::IdentifyingDatagram;
         return Stim300Status::NORMAL;
-    } // end reading mode switch
+    }  // end reading mode switch
 
     if (!verifyChecksum(buffer_.cbegin(), buffer_.cend(), crc_dummy_bytes_))
     {
       // The "ID" was likely a byte happening to be equal the datagram id,
       // and not actually the start of a datagram, thus the buffer does
       // not contain a complete datagram.
-      std::cerr<<"CRC error"<<std::endl;
+      std::cerr << "CRC error" << std::endl;
       reading_mode_ = ReadingMode::IdentifyingDatagram;
       return Stim300Status::NORMAL;
     }
@@ -168,7 +165,7 @@ Stim300Status DriverStim300::readDataStream()
         datagram_id_ == datagramIdentifierToRaw(DatagramIdentifier::CONFIGURATION))
     {
       stim_300::SensorConfig sensor_config = datagram_parser_.parseConfig(buffer_.cbegin());
-      Stim300Status status {Stim300Status::NORMAL};
+      Stim300Status status{ Stim300Status::NORMAL };
       if (sensor_config != sensor_config_)
         status = Stim300Status::CONFIG_CHANGED;
 
@@ -176,11 +173,11 @@ Stim300Status DriverStim300::readDataStream()
       setDatagramFormat(sensor_config_.datagram_id);
       datagram_parser_.setDataParameters(sensor_config_);
       read_config_from_sensor_ = false;
-      std::cout<<"Parsed config datagram"<<std::endl;
+      std::cout << "Parsed config datagram" << std::endl;
       reading_mode_ = ReadingMode::IdentifyingDatagram;
       return status;
     }
-    else // Normal (measurement) datagram
+    else  // Normal (measurement) datagram
     {
       sensor_status_ = datagram_parser_.parseData(buffer_.cbegin(), sensor_data_);
       reading_mode_ = ReadingMode::IdentifyingDatagram;
@@ -236,10 +233,8 @@ bool DriverStim300::setDatagramFormat(DatagramIdentifier id)
   crc_dummy_bytes_ = numberOfPaddingBytes(id);
 }
 
-bool DriverStim300::verifyChecksum(
-  const std::vector<uint8_t>::const_iterator& begin,
-  const std::vector<uint8_t>::const_iterator& end,
-  const uint8_t& crc_dummy_bytes)
+bool DriverStim300::verifyChecksum(const std::vector<uint8_t>::const_iterator& begin,
+                                   const std::vector<uint8_t>::const_iterator& end, const uint8_t& crc_dummy_bytes)
 {
   uint32_t crc = stim_300::DatagramParser::parseCRC(end - sizeof(uint32_t));
 

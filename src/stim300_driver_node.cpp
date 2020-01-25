@@ -4,10 +4,9 @@
 #include "ros/ros.h"
 #include "sensor_msgs/Imu.h"
 
-
 constexpr int defaultSampleRate{ 125 };
-constexpr double averageAllanVarianceOfGyro{ 0.0001 * 2 * 0.00046};
-constexpr double averageAllanVarianceOfAcc{ 100 * 2 * 0.0052};
+constexpr double averageAllanVarianceOfGyro{ 0.0001 * 2 * 0.00046 };
+constexpr double averageAllanVarianceOfAcc{ 100 * 2 * 0.0052 };
 
 int main(int argc, char** argv)
 {
@@ -31,7 +30,6 @@ int main(int argc, char** argv)
   node.param("sample_rate", sampleRate, defaultSampleRate);
   varianceOfGyro = sampleRate * pow(stanardDeivationOfGyro, 2);
   varianceOfAcc = sampleRate * pow(stanardDeviationOfAcc, 2);
-
 
   sensor_msgs::Imu imu_msg_template{};
   imu_msg_template.orientation_covariance[0] = -1;
@@ -79,7 +77,6 @@ int main(int argc, char** argv)
       stim300msg.angular_velocity.y = driver_stim300.getGyroY();
       stim300msg.angular_velocity.z = driver_stim300.getGyroZ();
       imuSensorPublisher.publish(stim300msg);
-
     }
 
     loop_rate.sleep();

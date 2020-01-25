@@ -27,9 +27,9 @@ struct SensorConfig
   inline bool operator!=(const SensorConfig& rhs)
   {
     return this->sample_freq != rhs.sample_freq or this->datagram_id != rhs.datagram_id or
-           this->normal_datagram_CRLF != rhs.normal_datagram_CRLF or
-           this->gyro_output_unit != rhs.gyro_output_unit or this->acc_output_unit != rhs.acc_output_unit or
-           this->incl_output_unit != rhs.incl_output_unit or this->acc_range != rhs.acc_range;
+           this->normal_datagram_CRLF != rhs.normal_datagram_CRLF or this->gyro_output_unit != rhs.gyro_output_unit or
+           this->acc_output_unit != rhs.acc_output_unit or this->incl_output_unit != rhs.incl_output_unit or
+           this->acc_range != rhs.acc_range;
   }
 
   std::string print() const
