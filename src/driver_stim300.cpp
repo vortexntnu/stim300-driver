@@ -5,12 +5,9 @@
 
 DriverStim300::DriverStim300(SerialDriver& serial_driver, DatagramIdentifier datagram_id,
                              GyroOutputUnit gyro_output_unit, AccOutputUnit acc_output_unit,
-                             InclOutputUnit incl_output_unit, SerialDriver::BAUDRATE baudrate,
-                             uint16_t serial_read_timeout_ms, AccRange acc_range,
-                             SampleFreq freq, bool read_config_from_sensor)
+                             InclOutputUnit incl_output_unit, AccRange acc_range,
+                             SampleFreq freq, bool read_config_from_sensor) noexcept
   : serial_driver_(serial_driver)
-  , serial_read_timeout_ms_(serial_read_timeout_ms)
-  , baudrate_(baudrate)
   , datagram_id_(datagramIdentifierToRaw(datagram_id))
   , mode_(Mode::Init)
   , reading_mode_(ReadingMode::IdentifyingDatagram)
@@ -24,13 +21,8 @@ DriverStim300::DriverStim300(SerialDriver& serial_driver, DatagramIdentifier dat
   , datagram_size_(calculateDatagramSize(datagram_id))
   , read_config_from_sensor_(read_config_from_sensor)
 {
-  serial_driver_.open(baudrate);
 }
 
-DriverStim300::~DriverStim300()
-{
-  serial_driver_.close();
-}
 
 double DriverStim300::getAccX() const noexcept
 {
@@ -218,17 +210,12 @@ void DriverStim300::askForConfigDatagram()
   serial_driver_.writeByte(0x0D);
 }
 
-Stim300Status DriverStim300::update()
+Stim300Status DriverStim300::update() noexcept
 {
   switch (mode_)
   {
     case Mode::Init:
-      // Read Data config
-      mode_ = Mode::Normal;
-    case Mode::Normal:
-      // Read from buffer until we find a datagram identifyer.
-      // Read the amount of bytes one datagram should contain.
-      // Parse that datagram.
+      serial_driver_.flush();
       if (read_config_from_sensor_)
         askForConfigDatagram();
       mode_ = Mode::Normal;

@@ -129,3 +129,8 @@ bool SerialUnix::readByte(uint8_t& byte)
 {
   return (read(file_handle_, &byte, 1) > 0);
 }
+
+bool SerialUnix::flush()
+{
+  return tcflush(file_handle_, TCIOFLUSH) == 0;
+}

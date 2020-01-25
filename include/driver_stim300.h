@@ -30,12 +30,10 @@
                   GyroOutputUnit gyro_output_unit = GyroOutputUnit::ANGULAR_RATE,
                   AccOutputUnit acc_output_unit = AccOutputUnit::ACCELERATION,
                   InclOutputUnit incl_output_unit = InclOutputUnit::ACCELERATION,
-                  SerialDriver::BAUDRATE baudrate = SerialDriver::BAUDRATE::BAUD_921600,
-                  uint16_t serial_read_timeout_ms = 1,
                   AccRange acc_range = AccRange::G5,
                   SampleFreq freq = SampleFreq::S250,
-                  bool read_config_from_sensor = true);
-    ~DriverStim300();
+                  bool read_config_from_sensor = true) noexcept;
+    ~DriverStim300() = default;
     //The class is Non-Copyable
     DriverStim300(const DriverStim300& a) = delete;
     DriverStim300& operator=(const DriverStim300& a) = delete;
@@ -54,7 +52,7 @@
     std::string printSensorConfig() const noexcept;
     bool isSensorStatusGood() const noexcept;
     uint8_t getInternalMeasurementCounter() const noexcept;
-    Stim300Status update();
+    Stim300Status update() noexcept;
 
   private:
     enum class Mode : uint8_t
@@ -75,8 +73,6 @@
     bool read_config_from_sensor_;
 
     SerialDriver& serial_driver_;
-    uint16_t serial_read_timeout_ms_;
-    SerialDriver::BAUDRATE baudrate_;
     std::vector<uint8_t> buffer_;
     size_t n_new_bytes_;
     size_t n_checked_bytes;
