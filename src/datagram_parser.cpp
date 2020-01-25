@@ -59,7 +59,7 @@ uint32_t DatagramParser::parseCRC(std::vector<uint8_t>::const_iterator&& itr)
   return parseUnsigned(itr, N_BYTES_CRC);
 }
 
-bool DatagramParser::parseData(std::vector<uint8_t>::const_iterator& buffer_itr, SensorData& sensor_data) const
+uint8_t DatagramParser::parseData(std::vector<uint8_t>::const_iterator&& buffer_itr, SensorData& sensor_data) const
 {
   uint8_t status{ 0 };
   buffer_itr++; // Skip datagram identifier
@@ -67,19 +67,19 @@ bool DatagramParser::parseData(std::vector<uint8_t>::const_iterator& buffer_itr,
   {
     for (auto& gyro : sensor_data.gyro)
       gyro = gyro_scale_ * parseTwosComplement(buffer_itr, N_BYTES_INERTIAL_SENSOR);
-    status += parseUnsigned(buffer_itr, N_BYTES_STATUS);
+    status |= parseUnsigned(buffer_itr, N_BYTES_STATUS);
   }
   if (is_included_[SensorIndx::ACC])
   {
     for (auto& acc : sensor_data.acc)
       acc = acc_scale_ * parseTwosComplement(buffer_itr, N_BYTES_INERTIAL_SENSOR);
-    status += parseUnsigned(buffer_itr, N_BYTES_STATUS);
+    status |= parseUnsigned(buffer_itr, N_BYTES_STATUS);
   }
   if (is_included_[SensorIndx::INCL])
   {
     for (auto& incl : sensor_data.incl)
       incl = incl_scale_ * parseTwosComplement(buffer_itr, N_BYTES_INERTIAL_SENSOR);
-    status += parseUnsigned(buffer_itr, N_BYTES_STATUS);
+    status |= parseUnsigned(buffer_itr, N_BYTES_STATUS);
   }
   if (is_included_[SensorIndx::TEMP])
   {
@@ -87,36 +87,36 @@ bool DatagramParser::parseData(std::vector<uint8_t>::const_iterator& buffer_itr,
     {
       for (auto& temp : sensor_data.temp_gyro)
         temp = temp_scale_ * parseTwosComplement(buffer_itr, N_BYTES_TEMP_SENSOR);
-      status += parseUnsigned(buffer_itr, N_BYTES_STATUS);
+      status |= parseUnsigned(buffer_itr, N_BYTES_STATUS);
     }
     if (is_included_[SensorIndx::ACC])
     {
       for (auto& temp : sensor_data.temp_acc)
         temp = temp_scale_ * parseTwosComplement(buffer_itr, N_BYTES_TEMP_SENSOR);
-      status += parseUnsigned(buffer_itr, N_BYTES_STATUS);
+      status |= parseUnsigned(buffer_itr, N_BYTES_STATUS);
     }
     if (is_included_[SensorIndx::INCL])
     {
       for (auto& temp : sensor_data.temp_incl)
         temp = tempScale() * parseTwosComplement(buffer_itr, N_BYTES_TEMP_SENSOR);
-      status += parseUnsigned(buffer_itr, N_BYTES_STATUS);
+      status |= parseUnsigned(buffer_itr, N_BYTES_STATUS);
     }
   }
   if (is_included_[SensorIndx::AUX])
   {
     sensor_data.aux = aux_scale_ * parseTwosComplement(buffer_itr, N_BYTES_AUX_SENSOR);
-    status += parseUnsigned(buffer_itr, N_BYTES_STATUS);
+    status |= parseUnsigned(buffer_itr, N_BYTES_STATUS);
   }
   sensor_data.counter = parseUnsigned(buffer_itr, N_BYTES_COUNTER);
 
   sensor_data.latency_us = parseUnsigned(buffer_itr, N_BYTES_LATENCY);
 
-  return status == 0;
+  return status;
 }
 
-bool DatagramParser::parseConfig(std::vector<uint8_t>::const_iterator& buffer_itr, struct SensorConfig
-& sensor_config) const
+SensorConfig DatagramParser::parseConfig(std::vector<uint8_t>::const_iterator&& buffer_itr) const
 {
+  SensorConfig sensor_config{};
   sensor_config.revision = buffer_itr[1];
   sensor_config.firmvare_version = buffer_itr[2];
   switch (buffer_itr[3]  >> 5u)
@@ -135,7 +135,7 @@ bool DatagramParser::parseConfig(std::vector<uint8_t>::const_iterator& buffer_it
       sensor_config.sample_freq = SampleFreq::TRG; break;
   }
 
-  //sensor_config.normal_datagram_termination = (buffer_itr[3] & (1<<0));
+  sensor_config.normal_datagram_CRLF = (buffer_itr[3] & (1 << 0));
   std::array<bool,5> included_sensors {};
   included_sensors[SensorIndx::GYRO] = true;
   included_sensors[SensorIndx::ACC] = (buffer_itr[3] & (1<<1));
@@ -201,4 +201,5 @@ bool DatagramParser::parseConfig(std::vector<uint8_t>::const_iterator& buffer_it
     case 6:
       sensor_config.acc_range = AccRange::G80; break;
   }
+  return sensor_config;
 }

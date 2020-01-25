@@ -7,7 +7,7 @@
 #include <array>
 #include "stim300_constants.h"
 #include <sstream>
-
+#include <cassert>
 using namespace stim_const;
 
 namespace stim_300
@@ -18,6 +18,7 @@ struct SensorConfig
   uint8_t firmvare_version;
   SampleFreq sample_freq;
   DatagramIdentifier datagram_id;
+  bool normal_datagram_CRLF;
   GyroOutputUnit gyro_output_unit;
   AccOutputUnit acc_output_unit;
   InclOutputUnit incl_output_unit;
@@ -26,6 +27,7 @@ struct SensorConfig
   inline bool operator!=(const SensorConfig& rhs)
   {
     return this->sample_freq != rhs.sample_freq or this->datagram_id != rhs.datagram_id or
+           this->normal_datagram_CRLF != rhs.normal_datagram_CRLF or
            this->gyro_output_unit != rhs.gyro_output_unit or this->acc_output_unit != rhs.acc_output_unit or
            this->incl_output_unit != rhs.incl_output_unit or this->acc_range != rhs.acc_range;
   }
@@ -63,6 +65,7 @@ struct SensorConfig
     ss << "Inlcinometer:\t" << included_sensors[SensorIndx::INCL] << std::endl;
     ss << "Temprature:\t\t" << included_sensors[SensorIndx::TEMP] << std::endl;
     ss << "Aux:\t\t\t" << included_sensors[SensorIndx::AUX] << std::endl;
+    ss << "Normal Datagram termination: " << normal_datagram_CRLF << std::endl;
     ss << "Gyro output:\t\t\t";
     switch (gyro_output_unit)
     {
@@ -157,8 +160,8 @@ struct DatagramParser
                  AccRange acc_range);
   void setDataParameters(SensorConfig sensor_config);
   static uint32_t parseCRC(std::vector<uint8_t>::const_iterator&& itr);
-  bool parseData(std::vector<uint8_t>::const_iterator& buffer_itr, SensorData& sensor_data) const;
-  bool parseConfig(std::vector<uint8_t>::const_iterator& buffer_itr, struct SensorConfig& sensor_config) const;
+  uint8_t parseData(std::vector<uint8_t>::const_iterator&& buffer_itr, SensorData& sensor_data) const;
+  SensorConfig parseConfig(std::vector<uint8_t>::const_iterator&& buffer_itr) const;
 
 private:
   std::array<bool, 5> is_included_;
@@ -184,8 +187,9 @@ private:
   // bu we shift them to fill up the int32_t type then we shift them back to their right
   // position. When we shift them back the shift operator will automatically sign-extend the
   // value.
-  static const int32_t parseTwosComplement(std::vector<uint8_t>::const_iterator& it, uint8_t size)
+  static const int32_t parseTwosComplement(std::vector<uint8_t>::const_iterator& it, const uint8_t size)
   {
+    assert(size == 3 or size == 2);
     if (size == 3)
     {
       return ((*it++ << 24) | (*it++ << 16) | (*it++ << 8)) >> 8;
@@ -193,10 +197,6 @@ private:
     else if (size == 2)
     {
       return ((*it++ << 24) | (*it++ << 16)) >> 16;
-    }
-    else
-    {
-      throw std::runtime_error("Unsuported input size for parseTwoComplement");
     }
   }
 };
