@@ -18,8 +18,6 @@ static constexpr uint8_t N_BYTES_STATUS = 1;
 static constexpr uint8_t N_BYTES_TERMINATION = 2;
 static constexpr uint8_t MAX_DATAGRAM_SIZE = 65;
 
-static constexpr double STIM300_GRAVITY = 9.81;
-
 enum class DatagramIdentifier
 {
   RATE,
@@ -221,15 +219,15 @@ static constexpr double accScale(AccRange acc_range)
   switch (acc_range)
   {
     case AccRange::G2:
-      return (STIM300_GRAVITY) / powerOf2(21);
+      return 1.0 / powerOf2(21);
     case AccRange::G5:
-      return (STIM300_GRAVITY) / powerOf2(20);
+      return 1.0 / powerOf2(20);
     case AccRange::G10:
-      return (STIM300_GRAVITY) / powerOf2(19);
+      return 1.0 / powerOf2(19);
     case AccRange::G30:
-      return (STIM300_GRAVITY) / powerOf2(18);
+      return 1.0 / powerOf2(18);
     case AccRange::G80:
-      return (STIM300_GRAVITY) / powerOf2(16);
+      return 1.0 / powerOf2(16);
   }
 }
 
@@ -260,7 +258,7 @@ static constexpr double gyroScale()
 }
 static constexpr double inclScale()
 {
-  return (STIM300_GRAVITY) / powerOf2(22);
+  return 1.0 / powerOf2(22);
 }
 static constexpr double inclIncrScale()
 {

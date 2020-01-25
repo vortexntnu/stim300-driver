@@ -32,8 +32,8 @@ void DatagramParser::setDataScales(GyroOutputUnit gyro_o, AccOutputUnit acc_o, I
   }
   switch (acc_o)
   {
-    case AccOutputUnit::ACCELERATION:          // units are in m/s^2
-    case AccOutputUnit::AVERAGE_ACCELERATION:  // units are in m/s^2
+    case AccOutputUnit::ACCELERATION:          // units are in g
+    case AccOutputUnit::AVERAGE_ACCELERATION:  // units are in g
       acc_scale_ = accScale(acc_range);
       break;
     case AccOutputUnit::INCREMENTAL_VELOCITY:  // units are in m/s/sample
@@ -43,8 +43,8 @@ void DatagramParser::setDataScales(GyroOutputUnit gyro_o, AccOutputUnit acc_o, I
   }
   switch (incl_o)
   {
-    case InclOutputUnit::ACCELERATION:          // units are in m/s^2
-    case InclOutputUnit::AVERAGE_ACCELERATION:  // units are in m/s^2
+    case InclOutputUnit::ACCELERATION:          // units are in g
+    case InclOutputUnit::AVERAGE_ACCELERATION:  // units are in g
       incl_scale_ = inclScale();
       break;
     case InclOutputUnit::INCREMENTAL_VELOCITY:  // units are in m/s/sample
