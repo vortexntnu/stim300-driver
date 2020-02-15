@@ -4,23 +4,22 @@
 
 DriverStim300::DriverStim300(SerialDriver& serial_driver, DatagramIdentifier datagram_id,
                              GyroOutputUnit gyro_output_unit, AccOutputUnit acc_output_unit,
-                             InclOutputUnit incl_output_unit, AccRange acc_range, SampleFreq freq,
-                             bool read_config_from_sensor) noexcept
+                             InclOutputUnit incl_output_unit, AccRange acc_range, SampleFreq freq)
   : serial_driver_(serial_driver)
-  , datagram_id_(datagramIdentifierToRaw(datagram_id))
-  , mode_(Mode::Init)
-  , reading_mode_(ReadingMode::IdentifyingDatagram)
-  , n_new_bytes_(0)
-  , sensor_status_(0)
-  , crc_dummy_bytes_(numberOfPaddingBytes(datagram_id))
-  , sensor_config_{ '0', 0, freq, datagram_id, false, gyro_output_unit, acc_output_unit, incl_output_unit, acc_range }
-  , sensor_data_()
   , datagram_parser_(datagram_id, gyro_output_unit, acc_output_unit, incl_output_unit, acc_range)
+  , datagram_id_(datagramIdentifierToRaw(datagram_id))
+  , crc_dummy_bytes_(numberOfPaddingBytes(datagram_id))
   , datagram_size_(calculateDatagramSize(datagram_id))
-  , read_config_from_sensor_(read_config_from_sensor)
+  , sensor_config_{ '0', 0, freq, datagram_id, false, gyro_output_unit, acc_output_unit, incl_output_unit, acc_range }
 {
 }
 
+DriverStim300::DriverStim300(SerialDriver& serial_driver)
+  : DriverStim300(serial_driver, DatagramIdentifier::RATE_ACC_INCL_TEMP_AUX, GyroOutputUnit::AVERAGE_ANGULAR_RATE,
+                  AccOutputUnit::AVERAGE_ACCELERATION, InclOutputUnit::AVERAGE_ACCELERATION, AccRange::G5,
+                  SampleFreq::S125)
+{
+}
 double DriverStim300::getAccX() const noexcept
 {
   return sensor_data_.acc[0];
@@ -95,15 +94,14 @@ Stim300Status DriverStim300::readDataStream()
         {
           if (++n_checked_bytes > 100)
           {
-            //std::cerr << "Not able to recognise datagram" << std::endl;
-            if (read_config_from_sensor_)
-              askForConfigDatagram();
+            // std::cerr << "Not able to recognise datagram" << std::endl;
+            if (read_config_from_sensor_) askForConfigDatagram();
             n_checked_bytes = 0;
           }
           continue;
         }
-        if (n_checked_bytes != 0)
-          //std::cout << "Checked bytes: " << n_checked_bytes << std::endl;
+        // if (n_checked_bytes != 0)
+        //  std::cout << "Checked bytes: " << n_checked_bytes << std::endl;
         n_checked_bytes = 0;
         reading_mode_ = ReadingMode::ReadingDatagram;
         buffer_.push_back(byte);
@@ -204,7 +202,7 @@ Stim300Status DriverStim300::readDataStream()
 void DriverStim300::askForConfigDatagram()
 {
   serial_driver_.writeByte('C');
-  serial_driver_.writeByte(0x0D);
+  serial_driver_.writeByte('\r');
 }
 
 Stim300Status DriverStim300::update() noexcept
@@ -247,11 +245,114 @@ bool DriverStim300::verifyChecksum(const std::vector<uint8_t>::const_iterator& b
     buffer_CRC[sizeof(buffer_CRC) - (1 + i)] = 0x00;
 
   crc_32_calculator.process_bytes(buffer_CRC, sizeof(buffer_CRC));
-
-  return crc_32_calculator.checksum() == crc;
+  auto crc_calck = crc_32_calculator.checksum();
+  return crc_calck == crc;
 }
 
 std::string DriverStim300::printSensorConfig() const noexcept
 {
-  return sensor_config_.print();
+  std::stringstream ss;
+  ss << "\nFirmware: " << sensor_config_.revision << std::to_string(sensor_config_.firmvare_version) << std::endl;
+  ss << "Sample_freq: ";
+  switch (sensor_config_.sample_freq)
+  {
+    case SampleFreq::S125:
+      ss << "125 Hz";
+      break;
+    case SampleFreq::S250:
+      ss << "250 Hz";
+      break;
+    case SampleFreq::S500:
+      ss << "500 Hz";
+      break;
+    case SampleFreq::S1000:
+      ss << "1000 Hz";
+      break;
+    case SampleFreq::S2000:
+      ss << "2000 Hz";
+      break;
+    case SampleFreq::TRG:
+      ss << "External Trigger";
+      break;
+  }
+  ss << std::endl;
+  auto included_sensors = isIncluded(sensor_config_.datagram_id);
+  ss << "Gyro:\t\t\t" << included_sensors[SensorIndx::GYRO] << std::endl;
+  ss << "Accelerometer:\t" << included_sensors[SensorIndx::ACC] << std::endl;
+  ss << "Inlcinometer:\t" << included_sensors[SensorIndx::INCL] << std::endl;
+  ss << "Temprature:\t\t" << included_sensors[SensorIndx::TEMP] << std::endl;
+  ss << "Aux:\t\t\t" << included_sensors[SensorIndx::AUX] << std::endl;
+  ss << "Normal Datagram termination: " << sensor_config_.normal_datagram_CRLF << std::endl;
+  ss << "Gyro output:\t\t\t";
+  switch (sensor_config_.gyro_output_unit)
+  {
+    case GyroOutputUnit::ANGULAR_RATE:
+      ss << "Angular rate";
+      break;
+    case GyroOutputUnit::AVERAGE_ANGULAR_RATE:
+      ss << "Average angular rate";
+      break;
+    case GyroOutputUnit::INCREMENTAL_ANGLE:
+      ss << "Incremental angle";
+      break;
+    case GyroOutputUnit::INTEGRATED_ANGLE:
+      ss << "Integrated angle";
+      break;
+  }
+  ss << std::endl;
+  ss << "Accelerometer output:\t";
+  switch (sensor_config_.acc_output_unit)
+  {
+    case AccOutputUnit::ACCELERATION:
+      ss << "Acceleration";
+      break;
+    case AccOutputUnit::AVERAGE_ACCELERATION:
+      ss << "Average acceleration";
+      break;
+    case AccOutputUnit::INCREMENTAL_VELOCITY:
+      ss << "Incremental velocity";
+      break;
+    case AccOutputUnit::INTEGRATED_VELOCITY:
+      ss << "Integrated velocity";
+      break;
+  }
+  ss << std::endl;
+  ss << "Inclinometer output:\t";
+  switch (sensor_config_.incl_output_unit)
+  {
+    case InclOutputUnit::ACCELERATION:
+      ss << "Acceleration";
+      break;
+    case InclOutputUnit::AVERAGE_ACCELERATION:
+      ss << "Average acceleration";
+      break;
+    case InclOutputUnit::INCREMENTAL_VELOCITY:
+      ss << "Incremental velocity";
+      break;
+    case InclOutputUnit::INTEGRATED_VELOCITY:
+      ss << "Integrated velocity";
+      break;
+  }
+  ss << std::endl;
+  ss << "Acceleration range: ";
+  switch (sensor_config_.acc_range)
+  {
+    case AccRange::G2:
+      ss << "2";
+      break;
+    case AccRange::G5:
+      ss << "5";
+      break;
+    case AccRange::G10:
+      ss << "10";
+      break;
+    case AccRange::G30:
+      ss << "30";
+      break;
+    case AccRange::G80:
+      ss << "80";
+      break;
+  }
+  ss << " g." << std::endl;
+  return ss.str();
 }

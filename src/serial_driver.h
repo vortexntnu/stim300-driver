@@ -5,8 +5,9 @@
 class SerialDriver
 {
 public:
+  virtual ~SerialDriver() = default;
   virtual bool readByte(uint8_t& byte) = 0;
-  virtual void writeByte(uint8_t byte) = 0;
+  virtual bool writeByte(uint8_t byte) = 0;
   virtual bool flush() = 0;
 };
 

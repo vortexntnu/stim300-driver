@@ -20,7 +20,7 @@ int main(int argc, char** argv)
   node.param("variance_gyro", variance_gyro, 0.00001);
   node.param("variance_acc", variance_acc, 0.00001);
   node.param("sample_rate", sample_rate, 125);
-  node.param("gravity", gravity, 9.81);
+  node.param("gravity", gravity, 9.80665);
 
   sensor_msgs::Imu stim300msg{};
   stim300msg.orientation_covariance[0] = -1;
@@ -37,55 +37,58 @@ int main(int argc, char** argv)
 
   ros::Publisher imuSensorPublisher = node.advertise<sensor_msgs::Imu>("imu/data_raw", 1000);
 
-  ros::Rate loop_rate(1000);
+  // New messages are sent from the sensor with sample_rate
+  // As loop_rate determines how often we check for new data
+  // on the serial buffer, theoretically loop_rate = sample_rate
+  // should be okey, but to be sure we double it
+  ros::Rate loop_rate(sample_rate * 2);
 
-  SerialUnix serial_driver(device_name);
   try
   {
-    serial_driver.open(BAUDRATE::BAUD_921600);
+    SerialUnix serial_driver(device_name, stim_const::BaudRate::BAUD_921600);
+    DriverStim300 driver_stim300(serial_driver);
+
+    ROS_INFO("STIM300 IMU driver initialized successfully");
+
+    while (ros::ok())
+    {
+      switch (driver_stim300.update())
+      {
+        case Stim300Status::NORMAL:
+          break;
+        case Stim300Status::NEW_MEASURMENT:
+          stim300msg.header.stamp = ros::Time::now();
+          stim300msg.linear_acceleration.x = driver_stim300.getAccX() * gravity;
+          stim300msg.linear_acceleration.y = driver_stim300.getAccY() * gravity;
+          stim300msg.linear_acceleration.z = driver_stim300.getAccZ() * gravity;
+          stim300msg.angular_velocity.x = driver_stim300.getGyroX();
+          stim300msg.angular_velocity.y = driver_stim300.getGyroY();
+          stim300msg.angular_velocity.z = driver_stim300.getGyroZ();
+          imuSensorPublisher.publish(stim300msg);
+          break;
+        case Stim300Status::CONFIG_CHANGED:
+          ROS_INFO("Updated Stim 300 imu config: ");
+          ROS_INFO("%s", driver_stim300.printSensorConfig().c_str());
+          break;
+        case Stim300Status::STARTING_SENSOR:
+          ROS_INFO("Stim 300 IMU is warming up.");
+          break;
+        case Stim300Status::SYSTEM_INTEGRITY_ERROR:
+        case Stim300Status::OUTSIDE_OPERATING_CONDITIONS:
+        case Stim300Status::OVERLOAD:
+        case Stim300Status::ERROR_IN_MEASUREMENT_CHANNEL:
+        case Stim300Status::ERROR:
+          ROS_WARN("Stim 300 IMU: internal error.");
+      }
+
+      loop_rate.sleep();
+      ros::spinOnce();
+    }
+    return 0;
   }
   catch (std::runtime_error& error)
   {
-    ROS_ERROR("%s\n",error.what());
+    ROS_ERROR("%s\n", error.what());
     return 0;
   }
-  DriverStim300 driver_stim300(serial_driver);
-
-  ROS_INFO("STIM300 IMU driver initialized successfully");
-
-  while (ros::ok())
-  {
-    switch (driver_stim300.update())
-    {
-      case Stim300Status::NORMAL:
-        break;
-      case Stim300Status::NEW_MEASURMENT:
-        stim300msg.header.stamp = ros::Time::now();
-        stim300msg.linear_acceleration.x = driver_stim300.getAccX() * gravity;
-        stim300msg.linear_acceleration.y = driver_stim300.getAccY() * gravity;
-        stim300msg.linear_acceleration.z = driver_stim300.getAccZ() * gravity;
-        stim300msg.angular_velocity.x = driver_stim300.getGyroX();
-        stim300msg.angular_velocity.y = driver_stim300.getGyroY();
-        stim300msg.angular_velocity.z = driver_stim300.getGyroZ();
-        imuSensorPublisher.publish(stim300msg);
-        break;
-      case Stim300Status::CONFIG_CHANGED:
-        ROS_INFO("Updated Stim 300 imu config: ");
-        ROS_INFO("%s",driver_stim300.printSensorConfig().c_str());
-        break;
-      case Stim300Status::STARTING_SENSOR:
-        ROS_INFO("Stim 300 IMU is warming up.");
-        break;
-      case Stim300Status::SYSTEM_INTEGRITY_ERROR:
-      case Stim300Status::OUTSIDE_OPERATING_CONDITIONS:
-      case Stim300Status::OVERLOAD:
-      case Stim300Status::ERROR_IN_MEASUREMENT_CHANNEL:
-      case Stim300Status::ERROR:
-        ROS_WARN("Stim 300 IMU: internal error.");
-    }
-
-    loop_rate.sleep();
-    ros::spinOnce();
-  }
-  return 0;
 }

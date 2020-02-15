@@ -9,36 +9,28 @@
 
 #include <cstring>
 #include <stdexcept>
-
-enum class BAUDRATE : uint32_t
-{
-  BAUD_4800 = 4800,
-  BAUD_9600 = 9600,
-  BAUD_19200 = 19200,
-  BAUD_38400 = 38400,
-  BAUD_57600 = 57600,
-  BAUD_115200 = 115200,
-  BAUD_921600 = 921600
-};
+#include "stim300_constants.h"
 
 class SerialUnix : public SerialDriver
 {
 public:
-  explicit SerialUnix(const std::string& serial_port_name);
+  SerialUnix(const std::string& serial_port_name, stim_const::BaudRate baudrate);
+  ~SerialUnix() final;
+  // The class is Non-Copyable
+  SerialUnix(const SerialUnix& a) = delete;
+  SerialUnix& operator=(const SerialUnix& a) = delete;
+  // The class is non-movable
+  SerialUnix(SerialUnix&& a) = delete;
+  SerialUnix& operator=(SerialUnix&& a) = delete;
 
-  ~SerialUnix();
-
-  void open(BAUDRATE baudrate);
-
-  void close();
-
-  void writeByte(uint8_t byte) override;
-
-  bool readByte(uint8_t& byte) override;
-
-  bool flush() override;
+  bool writeByte(uint8_t byte) final;
+  bool readByte(uint8_t& byte) final;
+  bool flush() final;
 
 private:
+  void open(const std::string& serial_port_name, stim_const::BaudRate baudrate);
+  void close();
+
   int file_handle_;
   struct termios config_;
 };

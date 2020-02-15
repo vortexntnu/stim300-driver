@@ -5,7 +5,7 @@
 #include <boost/crc.hpp>
 #include "../src/stim300_constants.h"
 #include "../src/datagram_parser.h"
-#include "../src/serial_driver.h"
+#include "../src/serial_unix.h"
 #include <vector>
 
 enum class Stim300Status
@@ -24,13 +24,9 @@ enum class Stim300Status
 class DriverStim300
 {
 public:
-  explicit DriverStim300(SerialDriver& serial_driver,
-                         DatagramIdentifier datagram_id = DatagramIdentifier::RATE_ACC_INCL_TEMP_AUX,
-                         GyroOutputUnit gyro_output_unit = GyroOutputUnit::ANGULAR_RATE,
-                         AccOutputUnit acc_output_unit = AccOutputUnit::ACCELERATION,
-                         InclOutputUnit incl_output_unit = InclOutputUnit::ACCELERATION,
-                         AccRange acc_range = AccRange::G5, SampleFreq freq = SampleFreq::S250,
-                         bool read_config_from_sensor = true) noexcept;
+  DriverStim300(SerialDriver& serial_driver, DatagramIdentifier datagram_id, GyroOutputUnit gyro_output_unit,
+                AccOutputUnit acc_output_unit, InclOutputUnit incl_output_unit, AccRange acc_range, SampleFreq freq);
+  explicit DriverStim300(SerialDriver& serial_driver);
   ~DriverStim300() = default;
   // The class is Non-Copyable
   DriverStim300(const DriverStim300& a) = delete;
@@ -59,7 +55,7 @@ private:
     Normal,
     Service
   };
-  Mode mode_;
+  Mode mode_{ Mode::Init };
   enum class ReadingMode
   {
     IdentifyingDatagram,
@@ -67,22 +63,21 @@ private:
     VerifyingDatagramCR,
     VerifyingDatagramLF
   };
-  ReadingMode reading_mode_;
-  bool read_config_from_sensor_;
+  ReadingMode reading_mode_{ ReadingMode::IdentifyingDatagram };
 
   SerialDriver& serial_driver_;
-  std::vector<uint8_t> buffer_;
-  size_t n_new_bytes_;
-  size_t n_checked_bytes;
+  stim_300::DatagramParser datagram_parser_;
+  std::vector<uint8_t> buffer_{};
+  size_t n_new_bytes_{ 0 };
+  size_t n_checked_bytes{ 0 };
 
   uint8_t datagram_id_;
-  stim_300::DatagramParser datagram_parser_;
-  uint8_t datagram_size_;
   uint8_t crc_dummy_bytes_;
-
+  uint8_t datagram_size_;
   stim_300::SensorConfig sensor_config_;
-  stim_300::SensorData sensor_data_;
-  uint8_t sensor_status_;
+  bool read_config_from_sensor_{ true };
+  stim_300::SensorData sensor_data_{};
+  uint8_t sensor_status_{ 0 };
 
   Stim300Status readDataStream();
   bool setDatagramFormat(DatagramIdentifier id);
