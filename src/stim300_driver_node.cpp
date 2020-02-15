@@ -3,6 +3,26 @@
 
 #include "ros/ros.h"
 #include "sensor_msgs/Imu.h"
+#include "std_srvs/Trigger.h"
+#include "std_srvs/Empty.h"
+
+
+bool calibration_mode{false};
+
+
+
+bool responseCalibrateIMU(std_srvs::Trigger::Request &calibration_request, std_srvs::Trigger::Response &calibration_response)
+{
+
+    if (calibration_mode == false)
+    {
+        calibration_mode = true;
+        calibration_response.message = "IMU in calibration mode ";
+        calibration_response.success = true;
+    }
+    
+    return true;
+}
 
 
 
