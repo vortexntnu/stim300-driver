@@ -16,17 +16,21 @@ TEST(DriverTest, Test1)
   DatagramBuffer datagram_buffer;
 
   ::testing::InSequence dummy;  // Expect_calls must happen in specified sequence
-
-  EXPECT_CALL(serial_driver, open(_)).Times(1);
+  EXPECT_CALL(serial_driver, flush()).Times(1);
+  EXPECT_CALL(serial_driver, writeByte('C')).Times(1);
+  EXPECT_CALL(serial_driver, writeByte('\r')).Times(1);
 
   EXPECT_CALL(serial_driver, readByte(_))
-      .Times(63)
-      .WillRepeatedly(Invoke(&datagram_buffer, &DatagramBuffer::getNextByte));
+    .Times(63)
+    .WillRepeatedly(Invoke(&datagram_buffer, &DatagramBuffer::getNextByte));
 
-  EXPECT_CALL(serial_driver, close()).Times(1);
+  // Only created a mock datagram for RATE_ACC_INCL_TEMP_AUX with all values equal to zero
+  // TODO: Create more advanced mock datagrams
+  DriverStim300 driverStim300(serial_driver, stim_const::DatagramIdentifier::RATE_ACC_INCL_TEMP_AUX,
+                              GyroOutputUnit::ANGULAR_RATE, AccOutputUnit::ACCELERATION, InclOutputUnit::ACCELERATION,
+                              AccRange::G5, SampleFreq::S125);
 
-  DriverStim300 driverStim300(serial_driver, stim_300::DatagramIdentifier::RATE_ACC_INCL_TEMP_AUX);
-  EXPECT_TRUE(driverStim300.processPacket());
+  EXPECT_EQ(Stim300Status::NEW_MEASURMENT, driverStim300.update());
   EXPECT_DOUBLE_EQ(0, driverStim300.getGyroX());
   EXPECT_DOUBLE_EQ(0, driverStim300.getGyroY());
   EXPECT_DOUBLE_EQ(0, driverStim300.getGyroZ());
@@ -35,7 +39,7 @@ TEST(DriverTest, Test1)
   EXPECT_DOUBLE_EQ(0, driverStim300.getAccZ());
 
   EXPECT_EQ(0, driverStim300.getLatency_us());
-  EXPECT_EQ(0, driverStim300.getInternalMeasurmentCounter());
+  EXPECT_EQ(0, driverStim300.getInternalMeasurementCounter());
 }
 
 int main(int argc, char** argv)
