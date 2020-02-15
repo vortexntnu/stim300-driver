@@ -89,6 +89,25 @@ enum class SampleFreq
   TRG
 };
 
+static constexpr uint16_t sampleFreq2int(const SampleFreq& sample_freq)
+{
+  switch (sample_freq)
+  {
+  case SampleFreq::S125:
+    return 125;
+  case SampleFreq::S250:
+    return 250;
+  case SampleFreq::S500:
+    return 500;
+  case SampleFreq::S1000:
+    return 1000;
+  case SampleFreq::S2000:
+    return 2000;
+  case SampleFreq::TRG:
+    return 0;
+  }
+}
+
 enum SensorIndx
 {
   GYRO = 0,

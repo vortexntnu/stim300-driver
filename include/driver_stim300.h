@@ -41,6 +41,11 @@ public:
   double getGyroX() const noexcept;
   double getGyroY() const noexcept;
   double getGyroZ() const noexcept;
+  double getIncX() const noexcept;
+  double getIncY() const noexcept;
+  double getIncZ() const noexcept;
+  uint16_t getSampleRate() const noexcept;
+
   uint16_t getLatency_us() const noexcept;
   double getAverageTemp() const noexcept;
   std::string printSensorConfig() const noexcept;
