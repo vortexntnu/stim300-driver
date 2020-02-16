@@ -8,7 +8,7 @@
 #include "iostream"
 
 bool calibration_mode{false};
-constexpr int NUMBER_OF_CALIBRATION_SAMPLES{1000};
+constexpr int NUMBER_OF_CALIBRATION_SAMPLES{20};
 
 
 
@@ -106,10 +106,10 @@ int main(int argc, char** argv)
         case Stim300Status::NEW_MEASURMENT:
            if (calibration_mode == true)
             {
-              std::cout<<"in calibration_mode"<<std::endl;
+              //std::cout<<"in calibration_mode"<<std::endl;
                 if(number_of_samples < NUMBER_OF_CALIBRATION_SAMPLES)
                 {
-                    std::cout<<"in calibration_mode"<<std::endl;
+                    //std::cout<<"in calibration_mode"<<std::endl;
                     inclination_x_calibration_sum += inclination_x;
                     inclination_y_calibration_sum += inclination_y;
                     inclination_z_calibration_sum += inclination_z;
@@ -117,7 +117,7 @@ int main(int argc, char** argv)
                 }
                 else
                 {
-                    
+                    std::cout<<"in else"<<std::endl;
                     inclination_x_average = inclination_x_calibration_sum/NUMBER_OF_CALIBRATION_SAMPLES;
                     inclination_y_average = inclination_y_calibration_sum/NUMBER_OF_CALIBRATION_SAMPLES;
                     inclination_z_average = inclination_z_calibration_sum/NUMBER_OF_CALIBRATION_SAMPLES;
