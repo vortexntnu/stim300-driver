@@ -5,7 +5,7 @@
 #include "sensor_msgs/Imu.h"
 #include "std_srvs/Trigger.h"
 #include "std_srvs/Empty.h"
-
+#include "iostream"
 
 bool calibration_mode{false};
 constexpr int NUMBER_OF_CALIBRATION_SAMPLES{1000};
@@ -123,7 +123,8 @@ int main(int argc, char** argv)
 
                     average_calibration_roll = atan2(inclination_y_average,inclination_z_average);
                     average_calibration_pitch = atan2(-inclination_x_average,sqrt(pow(inclination_y_average,2)+pow(inclination_z_average,2)));
-                    
+                    std::cout<<average_calibration_roll<<std::endl;
+                    std::cout<<average_calibration_pitch<<std::endl;
                     ROS_INFO("roll: %f", average_calibration_roll);
                     ROS_INFO("pitch: %f", average_calibration_pitch);
                     ROS_INFO("IMU Calibrated");
