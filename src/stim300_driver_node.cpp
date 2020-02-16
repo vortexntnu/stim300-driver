@@ -106,9 +106,10 @@ int main(int argc, char** argv)
         case Stim300Status::NEW_MEASURMENT:
            if (calibration_mode == true)
             {
+              std::cout<<"in calibration_mode"<<std::endl;
                 if(number_of_samples < NUMBER_OF_CALIBRATION_SAMPLES)
                 {
-                    
+                    std::cout<<"in calibration_mode"<<std::endl;
                     inclination_x_calibration_sum += inclination_x;
                     inclination_y_calibration_sum += inclination_y;
                     inclination_z_calibration_sum += inclination_z;
