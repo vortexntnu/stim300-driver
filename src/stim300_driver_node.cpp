@@ -39,7 +39,7 @@ int main(int argc, char** argv)
 
   ros::Publisher imuSensorPublisher = node.advertise<sensor_msgs::Imu>("imu/data_raw", 1000);
 
-  ros::ServiceServer service = node.advertiseService("IMU_calibration",responseCalibrateIMU);
+  //ros::ServiceServer service = node.advertiseService("IMU_calibration",responseCalibrateIMU);
 
   // New messages are sent from the sensor with sample_rate
   // As loop_rate determines how often we check for new data
