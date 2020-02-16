@@ -8,7 +8,7 @@
 #include "iostream"
 
 bool calibration_mode{false};
-constexpr int NUMBER_OF_CALIBRATION_SAMPLES{20};
+constexpr int NUMBER_OF_CALIBRATION_SAMPLES{100};
 
 
 
@@ -110,6 +110,8 @@ int main(int argc, char** argv)
                 if(number_of_samples < NUMBER_OF_CALIBRATION_SAMPLES)
                 {
                     //std::cout<<"in calibration_mode"<<std::endl;
+                    number_of_samples++;
+                    std::cout<<number_of_samples<<std::endl;
                     inclination_x_calibration_sum += inclination_x;
                     inclination_y_calibration_sum += inclination_y;
                     inclination_z_calibration_sum += inclination_z;
