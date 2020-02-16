@@ -9,6 +9,33 @@
 
 bool calibration_mode{false};
 constexpr int NUMBER_OF_CALIBRATION_SAMPLES{100};
+struct Quaternion
+{
+    double w, x, y, z;
+};
+
+struct EulerAngles {
+    double roll, pitch, yaw;
+};
+
+Quaternion FromRPYToQuaternion(EulerAngles angles) // yaw (Z), pitch (Y), roll (X)
+{
+    // Abbreviations for the various angular functions
+    double cy = cos(angles.yaw * 0.5);
+    double sy = sin(angles.yaw * 0.5);
+    double cp = cos(angles.pitch * 0.5);
+    double sp = sin(angles.pitch * 0.5);
+    double cr = cos(angles.roll * 0.5);
+    double sr = sin(angles.roll * 0.5);
+
+    Quaternion q;
+    q.w = cy * cp * cr + sy * sp * sr;
+    q.x = cy * cp * sr - sy * sp * cr;
+    q.y = sy * cp * sr + cy * sp * cr;
+    q.z = sy * cp * cr - cy * sp * sr;
+
+    return q;
+}
 
 
 
@@ -58,7 +85,7 @@ int main(int argc, char** argv)
   stim300msg.header.frame_id = "imu_0";
 
   ros::Publisher imuSensorPublisher = node.advertise<sensor_msgs::Imu>("imu/data_raw", 1000);
-
+  ros::Publisher orientationPublisher = node.advertise<sensor_msgs::Imu>("imu/orientation", 1000);
   ros::ServiceServer service = node.advertiseService("IMU_calibration",responseCalibrateIMU);
 
 
@@ -105,6 +132,8 @@ int main(int argc, char** argv)
               inclination_x = driver_stim300.getIncX();
               inclination_y = driver_stim300.getIncY();
               inclination_z = driver_stim300.getIncZ();
+              Quaternion q;
+              EulerAngles RPY;
            if (calibration_mode == true)
             {
               //std::cout<<"in calibration_mode"<<std::endl;
@@ -138,6 +167,9 @@ int main(int argc, char** argv)
             }
             else
             {
+                    RPY.roll = atan2(inclination_y,inclination_z);
+                    RPY.pitch = atan2(-inclination_x,sqrt(pow(inclination_y,2)+pow(inclination_z,2)));
+                    q = FromRPYToQuaternion(RPY);
                     stim300msg.header.stamp = ros::Time::now();
                     stim300msg.linear_acceleration.x = driver_stim300.getAccX() * gravity;
                     stim300msg.linear_acceleration.y = driver_stim300.getAccY() * gravity;
@@ -145,6 +177,10 @@ int main(int argc, char** argv)
                     stim300msg.angular_velocity.x = driver_stim300.getGyroX();
                     stim300msg.angular_velocity.y = driver_stim300.getGyroY();
                     stim300msg.angular_velocity.z = driver_stim300.getGyroZ();
+                    stim300msg.orientation.w = q.w;
+                    stim300msg.orientation.x = q.x;
+                    stim300msg.orientation.y = q.y;
+                    stim300msg.orientation.z = q.z;
                     imuSensorPublisher.publish(stim300msg);
                     break;
             }
