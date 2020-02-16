@@ -90,9 +90,7 @@ int main(int argc, char** argv)
     double inclination_x_average{0};
     double inclination_y_average{0};
     double inclination_z_average{0};
-    inclination_x = driver_stim300.getIncX();
-    inclination_y = driver_stim300.getIncY();
-    inclination_z = driver_stim300.getIncZ();
+  
 
 
     while (ros::ok())
@@ -104,6 +102,9 @@ int main(int argc, char** argv)
         case Stim300Status::OUTSIDE_OPERATING_CONDITIONS:
           ROS_DEBUG("Stim 300 outside operating conditions");
         case Stim300Status::NEW_MEASURMENT:
+              inclination_x = driver_stim300.getIncX();
+              inclination_y = driver_stim300.getIncY();
+              inclination_z = driver_stim300.getIncZ();
            if (calibration_mode == true)
             {
               //std::cout<<"in calibration_mode"<<std::endl;
@@ -111,7 +112,7 @@ int main(int argc, char** argv)
                 {
                     //std::cout<<"in calibration_mode"<<std::endl;
                     number_of_samples++;
-                    std::cout<<number_of_samples<<std::endl;
+                    //std::cout<<number_of_samples<<std::endl;
                     inclination_x_calibration_sum += inclination_x;
                     inclination_y_calibration_sum += inclination_y;
                     inclination_z_calibration_sum += inclination_z;
@@ -119,7 +120,7 @@ int main(int argc, char** argv)
                 }
                 else
                 {
-                    std::cout<<"in else"<<std::endl;
+                    //std::cout<<"in else"<<std::endl;
                     inclination_x_average = inclination_x_calibration_sum/NUMBER_OF_CALIBRATION_SAMPLES;
                     inclination_y_average = inclination_y_calibration_sum/NUMBER_OF_CALIBRATION_SAMPLES;
                     inclination_z_average = inclination_z_calibration_sum/NUMBER_OF_CALIBRATION_SAMPLES;
