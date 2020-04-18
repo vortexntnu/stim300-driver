@@ -9,6 +9,17 @@
 
 bool calibration_mode{false};
 constexpr int NUMBER_OF_CALIBRATION_SAMPLES{100};
+constexpr double ACC_TOLERANCE{0.1};
+constexpr double MAX_DROPPED_ACC_X_MSG{5};
+constexpr double MAX_DROPPED_ACC_Y_MSG{5};
+constexpr double MAX_DROPPED_ACC_Z_MSG{5};
+constexpr double MAX_DROPPED_GYRO_X_MSG{5};
+constexpr double MAX_DROPPED_GYRO_Y_MSG{5};
+constexpr double MAX_DROPPED_GYRO_Z_MSG{5};
+constexpr double GYRO_X_PEAK_TO_PEAK_NOISE{0.0002};
+constexpr double GYRO_Y_PEAK_TO_PEAK_NOISE{0.0002};
+constexpr double GYRO_Z_PEAK_TO_PEAK_NOISE{0.0002};
+
 struct Quaternion
 {
     double w, x, y, z;
@@ -85,7 +96,7 @@ int main(int argc, char** argv)
   stim300msg.header.frame_id = "imu_0";
 
   ros::Publisher imuSensorPublisher = node.advertise<sensor_msgs::Imu>("imu/data_raw", 1000);
-  ros::Publisher orientationPublisher = node.advertise<sensor_msgs::Imu>("imu/orientation", 1000);
+  //ros::Publisher orientationPublisher = node.advertise<sensor_msgs::Imu>("imu/orientation", 1000);
   ros::ServiceServer service = node.advertiseService("IMU_calibration",responseCalibrateIMU);
 
 
@@ -117,6 +128,23 @@ int main(int argc, char** argv)
     double inclination_x_average{0};
     double inclination_y_average{0};
     double inclination_z_average{0};
+
+    // Acc wild point filter
+    std::vector<double> acceleration_buffer_x{};
+    std::vector<double> acceleration_buffer_y{};
+    std::vector<double> acceleration_buffer_z{};
+    double dropped_acceleration_x_msg{0.0};
+    double dropped_acceleration_y_msg{0.0};
+    double dropped_acceleration_z_msg{0.0};
+
+    // Gyro wild point filter
+    std::vector<double> gyro_buffer_x{};
+    std::vector<double> gyro_buffer_y{};
+    std::vector<double> gyro_buffer_z{};
+    double dropped_gyro_x_msg{0.0};
+    double dropped_gyro_y_msg{0.0};
+    double dropped_gyro_z_msg{0.0};
+
   
 
 
@@ -128,6 +156,7 @@ int main(int argc, char** argv)
           break;
         case Stim300Status::OUTSIDE_OPERATING_CONDITIONS:
           ROS_DEBUG("Stim 300 outside operating conditions");
+          break;
         case Stim300Status::NEW_MEASURMENT:
               inclination_x = driver_stim300.getIncX();
               inclination_y = driver_stim300.getIncY();
@@ -170,13 +199,113 @@ int main(int argc, char** argv)
                     RPY.roll = atan2(inclination_y,inclination_z);
                     RPY.pitch = atan2(-inclination_x,sqrt(pow(inclination_y,2)+pow(inclination_z,2)));
                     q = FromRPYToQuaternion(RPY);
+
+                    // Acceleration wild point filter
+
+                    // Previous message
+                    acceleration_buffer_x.push_back(driver_stim300.getAccX * gravity);
+                    acceleration_buffer_y.push_back(driver_stim300.getAccY * gravity);
+                    acceleration_buffer_z.push_back(driver_stim300.getAccZ * gravity);
                     stim300msg.header.stamp = ros::Time::now();
-                    stim300msg.linear_acceleration.x = driver_stim300.getAccX() * gravity;
-                    stim300msg.linear_acceleration.y = driver_stim300.getAccY() * gravity;
-                    stim300msg.linear_acceleration.z = driver_stim300.getAccZ() * gravity;
-                    stim300msg.angular_velocity.x = driver_stim300.getGyroX();
-                    stim300msg.angular_velocity.y = driver_stim300.getGyroY();
-                    stim300msg.angular_velocity.z = driver_stim300.getGyroZ();
+
+                    if (acceleration_buffer_x.size() == 2 && acceleration_buffer_y.size() == 2 && acceleration_buffer_z.size() == 2)
+                    {
+                      if(std::abs(acceleration_buffer_x.back() - acceleration_buffer_x.front()) < ACC_TOLERANCE || dropped_acceleration_x_msg > MAX_DROPPED_ACC_X_MSG )
+                      {
+                        stim300msg.linear_acceleration.x = acceleration_buffer_x.back();
+                        dropped_acceleration_x_msg = 0;
+                      }
+                      else
+                      {
+                        ROS_DEBUG("ACC_X_MSG wild point rejected");
+                        dropped_acceleration_x_msg +=1;
+                      }
+
+                      if(std::abs(acceleration_buffer_y.back() - acceleration_buffer_y.front()) < ACC_TOLERANCE || dropped_acceleration_y_msg > MAX_DROPPED_ACC_Y_MSG )
+                      {
+                        stim300msg.linear_acceleration.y = acceleration_buffer_y.back();
+                        dropped_acceleration_y_msg = 0;
+                      }
+                      else
+                      {
+                        ROS_DEBUG("ACC_Y_MSG wild point rejected");
+                        dropped_acceleration_y_msg +=1;
+                      }
+
+                      if(std::abs(acceleration_buffer_z.back() - acceleration_buffer_z.front()) < ACC_TOLERANCE || dropped_acceleration_z_msg > MAX_DROPPED_ACC_Z_MSG )
+                      {
+                        stim300msg.linear_acceleration.z = acceleration_buffer_z.back();
+                        dropped_acceleration_z_msg = 0;
+                      }
+                      else
+                      {
+                        ROS_DEBUG("ACC_Z_MSG wild point rejected");
+                        dropped_acceleration_z_msg +=1;
+                      }
+                      // Empty acceleration buffers
+                      acceleration_buffer_x = std::vector<double>{acceleration_buffer_x.back()};
+                      acceleration_buffer_y = std::vector<double>{acceleration_buffer_y.back()};
+                      acceleration_buffer_z = std::vector<double>{acceleration_buffer_z.back()};
+                    }
+                    else
+                    {
+                      stim300msg.linear_acceleration.x = driver_stim300.getAccX() * gravity;
+                      stim300msg.linear_acceleration.y = driver_stim300.getAccY() * gravity;
+                      stim300msg.linear_acceleration.z = driver_stim300.getAccZ() * gravity;
+                    }
+
+                    // Gyro wild point filter
+                    gyro_buffer_x.push_back(driver_stim300.getGyroX());
+                    gyro_buffer_y.push_back(driver_stim300.getGyroY());
+                    gyro_buffer_z.push_back(driver_stim300.getGyroZ());
+
+                    if(gyro_buffer_x.size() == 2 && gyro_buffer_y.size() == 2 && gyro_buffer_z.size() == 2)
+                    {
+
+                      if(std::abs(gyro_buffer_x.back() - gyro_buffer_x.front()) < std::max(2*std::abs(gyro_buffer_x.front()),GYRO_X_PEAK_TO_PEAK_NOISE) || dropped_gyro_x_msg > MAX_DROPPED_GYRO_X_MSG)
+                      {
+                        stim300msg.angular_velocity.x = gyro_buffer_x.back();
+                        dropped_gyro_x_msg = 0;
+                      }
+                      else
+                      {
+                        ROS_DEBUG("GYRO_X_MSG wild point rejected");
+                        dropped_gyro_x_msg += 1;
+                      }
+
+                      if(std::abs(gyro_buffer_y.back() - gyro_buffer_y.front()) < std::max(2*std::abs(gyro_buffer_y.front()),GYRO_Y_PEAK_TO_PEAK_NOISE) || dropped_gyro_y_msg > MAX_DROPPED_GYRO_Y_MSG)
+                      {
+                        stim300msg.angular_velocity.x = gyro_buffer_y.back();
+                        dropped_gyro_y_msg = 0;
+                      }
+                      else
+                      {
+                        ROS_DEBUG("GYRO_Y_MSG wild point rejected");
+                        dropped_gyro_y_msg += 1;
+                      }
+
+                      if(std::abs(gyro_buffer_z.back() - gyro_buffer_z.front()) < std::max(2*std::abs(gyro_buffer_z.front()),GYRO_Z_PEAK_TO_PEAK_NOISE) || dropped_gyro_z_msg > MAX_DROPPED_GYRO_Z_MSG)
+                      {
+                        stim300msg.angular_velocity.z = gyro_buffer_z.back();
+                        dropped_gyro_z_msg = 0;
+                      }
+                      else
+                      {
+                        ROS_DEBUG("GYRO_Z_MSG wild point rejected");
+                        dropped_gyro_z_msg += 1;
+                      }
+
+                      // Empty buffers
+                      gyro_buffer_x = std::vector<double>{gyro_buffer_x.back()};
+                      gyro_buffer_y = std::vector<double>{gyro_buffer_y.back()};
+                      gyro_buffer_z = std::vector<double>{gyro_buffer_z.back()};
+                    }
+                    else
+                    {
+                      stim300msg.angular_velocity.x = driver_stim300.getGyroX();
+                      stim300msg.angular_velocity.y = driver_stim300.getGyroY();
+                      stim300msg.angular_velocity.z = driver_stim300.getGyroZ();
+                    }
                     stim300msg.orientation.w = q.w;
                     stim300msg.orientation.x = q.x;
                     stim300msg.orientation.y = q.y;
