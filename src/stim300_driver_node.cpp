@@ -48,7 +48,7 @@ int main(int argc, char** argv)
 
   ros::Publisher imuSensorPublisher = node.advertise<sensor_msgs::Imu>("imu/data_raw", 1000);
 
-  ros::Rate loop_rate(1000);
+  ros::Rate loop_rate(100);
 
   ROS_INFO("STIM300 IMU initialized successfully");
 
