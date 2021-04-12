@@ -1,5 +1,3 @@
-
-#include <iostream>
 #include "driver_stim300.h"
 
 DriverStim300::DriverStim300(SerialDriver& serial_driver, DatagramIdentifier datagram_id,

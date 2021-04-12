@@ -1,12 +1,13 @@
-
 #ifndef DRIVER_STIM300_DRIVER_STIM300_H
 #define DRIVER_STIM300_DRIVER_STIM300_H
 
 #include <boost/crc.hpp>
-#include "../src/stim300_constants.h"
-#include "../src/datagram_parser.h"
-#include "../src/serial_unix.h"
 #include <vector>
+#include <iostream>
+
+#include "stim300_constants.h"
+#include "datagram_parser.h"
+#include "serial_unix.h"
 
 enum class Stim300Status
 {

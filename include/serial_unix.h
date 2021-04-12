@@ -2,13 +2,15 @@
 #define DRIVER_STIM300_SERIAL_UBUNTU_H
 
 #include <string>
-#include "serial_driver.h"
 #include <termios.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <iostream>
 
 #include <cstring>
 #include <stdexcept>
+
+#include "serial_driver.h"
 #include "stim300_constants.h"
 
 class SerialUnix : public SerialDriver

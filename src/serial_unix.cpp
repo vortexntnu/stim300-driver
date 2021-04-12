@@ -1,6 +1,5 @@
-
 #include "serial_unix.h"
-#include <iostream>
+
 // Everything is learned from
 // https://en.wikibooks.org/wiki/Serial_Programming/termios
 // "termios is the newer (now already a few decades old) Unix API for terminal I/O"

@@ -1,4 +1,3 @@
-
 #include "datagram_parser.h"
 
 using namespace stim_const;

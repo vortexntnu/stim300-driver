@@ -1,13 +1,15 @@
-
 #ifndef DRIVER_STIM300_DATAGRAM_PARSER_H
 #define DRIVER_STIM300_DATAGRAM_PARSER_H
 
 #include <vector>
 #include <cstdint>
 #include <array>
-#include "stim300_constants.h"
 #include <sstream>
 #include <cassert>
+
+#include "stim300_constants.h"
+
+
 using namespace stim_const;
 
 namespace stim_300

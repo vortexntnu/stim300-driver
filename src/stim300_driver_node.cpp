@@ -1,10 +1,10 @@
+#include <ros/ros.h>
+#include <sensor_msgs/Imu.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2/LinearMath/Quaternion.h>
+
 #include "driver_stim300.h"
 #include "serial_unix.h"
-
-#include "ros/ros.h"
-#include "sensor_msgs/Imu.h"
-
-
 
 int main(int argc, char** argv)
 {
@@ -19,9 +19,9 @@ int main(int argc, char** argv)
   double gravity{ 0 };
 
   node.param<std::string>("device_name", device_name, "/dev/ttyUSB0");
-  node.param("variance_gyro", variance_gyro,0.0001);
+  node.param("variance_gyro", variance_gyro, 0.0001);
   node.param("variance_acc", variance_acc, 4.0);
-  node.param("sample_rate", sample_rate, 100);
+  node.param("sample_rate", sample_rate, 125);
   node.param("gravity", gravity, 9.80665);
 
   sensor_msgs::Imu stim300msg{};
@@ -32,20 +32,25 @@ int main(int argc, char** argv)
   stim300msg.linear_acceleration_covariance[0] = variance_acc;
   stim300msg.linear_acceleration_covariance[4] = variance_acc;
   stim300msg.linear_acceleration_covariance[8] = variance_acc;
+
   stim300msg.orientation.x = 0;
   stim300msg.orientation.y = 0;
   stim300msg.orientation.z = 0;
+
+  tf2::Quaternion quat_tf;
+  geometry_msgs::Quaternion quat_msg;
+
+  
   stim300msg.header.frame_id = "imu_0";
 
   ros::Publisher imuSensorPublisher = node.advertise<sensor_msgs::Imu>("imu/data_raw", 1);
-  
-  ros::Rate loop_rate(sample_rate );
+
+  ros::Rate loop_rate(sample_rate);
 
   try
   {
     SerialUnix serial_driver(device_name, stim_const::BaudRate::BAUD_921600);
     DriverStim300 driver_stim300(serial_driver);
-
 
     ROS_INFO("STIM300 IMU driver initialized successfully");
 
@@ -65,12 +70,13 @@ int main(int argc, char** argv)
           stim300msg.angular_velocity.x = driver_stim300.getGyroX();
           stim300msg.angular_velocity.y = driver_stim300.getGyroY();
           stim300msg.angular_velocity.z = driver_stim300.getGyroZ();
+          quat_tf.setRPY(driver_stim300.get);
           imuSensorPublisher.publish(stim300msg);
           break;
         case Stim300Status::CONFIG_CHANGED:
           ROS_INFO("Updated Stim 300 imu config: ");
           ROS_INFO("%s", driver_stim300.printSensorConfig().c_str());
-          loop_rate = driver_stim300.getSampleRate()*2;
+          loop_rate = driver_stim300.getSampleRate() * 2;
           break;
         case Stim300Status::STARTING_SENSOR:
           ROS_INFO("Stim 300 IMU is warming up.");
@@ -95,7 +101,7 @@ int main(int argc, char** argv)
   }
   catch (std::runtime_error& error)
   {
-    // TODO: Reset IMU 
+    // TODO: Reset IMU
     ROS_ERROR("%s\n", error.what());
     return 0;
   }
