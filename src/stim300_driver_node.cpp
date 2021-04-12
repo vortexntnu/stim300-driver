@@ -21,7 +21,7 @@ int main(int argc, char** argv)
   node.param<std::string>("device_name", device_name, "/dev/ttyUSB0");
   node.param("variance_gyro", variance_gyro,0.0001);
   node.param("variance_acc", variance_acc, 4.0);
-  node.param("sample_rate", sample_rate, 125);
+  node.param("sample_rate", sample_rate, 100);
   node.param("gravity", gravity, 9.80665);
 
   sensor_msgs::Imu stim300msg{};
@@ -37,15 +37,9 @@ int main(int argc, char** argv)
   stim300msg.orientation.z = 0;
   stim300msg.header.frame_id = "imu_0";
 
-  ros::Publisher imuSensorPublisher = node.advertise<sensor_msgs::Imu>("imu/data_raw", 1000);
-
-  //ros::ServiceServer service = node.advertiseService("IMU_calibration",responseCalibrateIMU);
-
-  // New messages are sent from the sensor with sample_rate
-  // As loop_rate determines how often we check for new data
-  // on the serial buffer, theoretically loop_rate = sample_rate
-  // should be okey, but to be sure we double it
-  ros::Rate loop_rate(sample_rate * 2);
+  ros::Publisher imuSensorPublisher = node.advertise<sensor_msgs::Imu>("imu/data_raw", 1);
+  
+  ros::Rate loop_rate(sample_rate );
 
   try
   {
