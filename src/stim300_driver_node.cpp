@@ -203,9 +203,9 @@ int main(int argc, char** argv)
                     // Acceleration wild point filter
 
                     // Previous message
-                    acceleration_buffer_x.push_back(driver_stim300.getAccX * gravity);
-                    acceleration_buffer_y.push_back(driver_stim300.getAccY * gravity);
-                    acceleration_buffer_z.push_back(driver_stim300.getAccZ * gravity);
+                    acceleration_buffer_x.push_back(driver_stim300.getAccX() * gravity);
+                    acceleration_buffer_y.push_back(driver_stim300.getAccY() * gravity);
+                    acceleration_buffer_z.push_back(driver_stim300.getAccZ() * gravity);
                     stim300msg.header.stamp = ros::Time::now();
 
                     if (acceleration_buffer_x.size() == 2 && acceleration_buffer_y.size() == 2 && acceleration_buffer_z.size() == 2)

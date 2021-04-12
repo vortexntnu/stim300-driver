@@ -36,7 +36,7 @@ target_link_libraries(stim300_driver_node PRIVATE stim300_driver_lib ${catkin_LI
 if (CATKIN_ENABLE_TESTING)
     catkin_add_gtest(check_datasheet_constanst
             test/check_stim300_constants.cpp
-            src/stim300_constants.h)
+            include/stim300_constants.h)
 
     target_link_libraries(check_datasheet_constanst ${catkin_LIBRARIES})
 endif()
@@ -45,7 +45,7 @@ if (CATKIN_ENABLE_TESTING)
     catkin_add_gmock(check_driver_stim300
             test/check_driver_stim300.cpp
             test/mock_serial_driver.h
-            src/serial_driver.h)
+            include/serial_driver.h)
 
     target_link_libraries(check_driver_stim300 stim300_driver_lib ${catkin_LIBRARIES})
 endif()
