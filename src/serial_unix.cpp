@@ -1,13 +1,13 @@
 
 #include "serial_unix.h"
-
+#include <iostream>
 // Everything is learned from
 // https://en.wikibooks.org/wiki/Serial_Programming/termios
 // "termios is the newer (now already a few decades old) Unix API for terminal I/O"
 
-SerialUnix::SerialUnix(const std::string& serial_port_name)
+SerialUnix::SerialUnix(const std::string& serial_port_name, stim_const::BaudRate baudrate)
 {
-  file_handle_ = ::open(serial_port_name.data(), O_RDWR | O_NOCTTY | O_NDELAY);
+  open(serial_port_name, baudrate);
 }
 
 SerialUnix::~SerialUnix()
@@ -15,11 +15,12 @@ SerialUnix::~SerialUnix()
   close();
 }
 
-void SerialUnix::open(BAUDRATE baudrate)
+void SerialUnix::open(const std::string& serial_port_name, stim_const::BaudRate baudrate)
 {
-  if (file_handle_ == -1)
+  file_handle_ = ::open(serial_port_name.data(), O_RDWR | O_NOCTTY | O_NDELAY);
+  if (file_handle_ < 0)
   {
-    throw std::runtime_error{ "Failed to open port" };
+    throw std::runtime_error{ std::string{ strerror(errno) } + ": " + serial_port_name };
   }
   //
   // Check if the file descriptor is pointing to a TTY device or not.
@@ -77,10 +78,11 @@ void SerialUnix::open(BAUDRATE baudrate)
   config_.c_cflag |= CS8;
 
   //
-  // One input byte is enough to return from read()
+  // Zero input byte is enough to return from read()
   // Inter-character timer off
+  // I.e. no blocking: return immediately with what is available.
   //
-  config_.c_cc[VMIN] = 1;
+  config_.c_cc[VMIN] = 0;
   config_.c_cc[VTIME] = 0;
   //
   // Communication speed (simple version, using the predefined
@@ -89,14 +91,17 @@ void SerialUnix::open(BAUDRATE baudrate)
   bool failure;
   switch (baudrate)
   {
-    case BAUDRATE::BAUD_115200:  // 115200:
-      failure = (cfsetispeed(&config_, B115200) < 0 || cfsetospeed(&config_, B115200) < 0);
+    case stim_const::BaudRate::BAUD_377400:
+      failure = (cfsetispeed(&config_, 377400) < 0 || cfsetospeed(&config_, 377400) < 0);
       break;
-    case BAUDRATE::BAUD_57600:  // 57600:
-      failure = (cfsetispeed(&config_, B57600) < 0 || cfsetospeed(&config_, B57600) < 0);
+    case stim_const::BaudRate::BAUD_460800:
+      failure = (cfsetispeed(&config_, B460800) < 0 || cfsetospeed(&config_, B460800) < 0);
       break;
-    case BAUDRATE::BAUD_921600:  // 921600:
+    case stim_const::BaudRate::BAUD_921600:
       failure = (cfsetispeed(&config_, B921600) < 0 || cfsetospeed(&config_, B921600) < 0);
+      break;
+    case stim_const::BaudRate::BAUD_1843200:  // 921600:
+      failure = (cfsetispeed(&config_, 1843200) < 0 || cfsetospeed(&config_, 1843200) < 0);
       break;
     default:
       failure = true;
@@ -109,9 +114,9 @@ void SerialUnix::open(BAUDRATE baudrate)
   //
   // Finally, apply the configuration
   //
-  if (tcsetattr(file_handle_, TCSAFLUSH, &config_) < 0)
+  if (tcsetattr(file_handle_, TCSAFLUSH, &config_) != 0)
   {
-    throw std::runtime_error{ "Could not apply serial settings" };
+    throw std::runtime_error{ strerror(errno) };
   }
 }
 
@@ -120,12 +125,27 @@ void SerialUnix::close()
   ::close(file_handle_);
 }
 
-void SerialUnix::writeByte(uint8_t byte)
+bool SerialUnix::writeByte(uint8_t byte)
 {
-  ::write(file_handle_, &byte, 1);
+  int result = ::write(file_handle_, &byte, 1);
+  if (result == -1)
+  {
+    throw std::runtime_error{ "WriteByte error:" + std::string{ strerror(errno) } };
+  }
+  return result == 1;
 }
 
 bool SerialUnix::readByte(uint8_t& byte)
 {
-  return (read(file_handle_, &byte, 1) > 0);
+  int result = read(file_handle_, &byte, 1);
+  if (result == -1)
+  {
+    throw std::runtime_error{ "ReadByte error:" + std::string{ strerror(errno) } };
+  }
+  return (result == 1);
+}
+
+bool SerialUnix::flush()
+{
+  return tcflush(file_handle_, TCIOFLUSH) == 0;
 }

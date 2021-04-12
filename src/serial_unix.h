@@ -7,25 +7,30 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <string.h>
+#include <cstring>
 #include <stdexcept>
+#include "stim300_constants.h"
 
 class SerialUnix : public SerialDriver
 {
 public:
-  explicit SerialUnix(const std::string& serial_port_name);
+  SerialUnix(const std::string& serial_port_name, stim_const::BaudRate baudrate);
+  ~SerialUnix() final;
+  // The class is Non-Copyable
+  SerialUnix(const SerialUnix& a) = delete;
+  SerialUnix& operator=(const SerialUnix& a) = delete;
+  // The class is non-movable
+  SerialUnix(SerialUnix&& a) = delete;
+  SerialUnix& operator=(SerialUnix&& a) = delete;
 
-  ~SerialUnix() override;
-
-  void open(BAUDRATE baudrate) override;
-
-  void close() override;
-
-  void writeByte(uint8_t byte) override;
-
-  bool readByte(uint8_t& byte) override;
+  bool writeByte(uint8_t byte) final;
+  bool readByte(uint8_t& byte) final;
+  bool flush() final;
 
 private:
+  void open(const std::string& serial_port_name, stim_const::BaudRate baudrate);
+  void close();
+
   int file_handle_;
   struct termios config_;
 };

@@ -5,33 +5,53 @@
 #include <boost/crc.hpp>
 #include "../src/stim300_constants.h"
 #include "../src/datagram_parser.h"
-#include "../src/serial_driver.h"
+#include "../src/serial_unix.h"
 #include <vector>
-#include <assert.h>
+
+enum class Stim300Status
+{
+  NORMAL,
+  NEW_MEASURMENT,
+  CONFIG_CHANGED,
+  STARTING_SENSOR,
+  SYSTEM_INTEGRITY_ERROR,
+  OUTSIDE_OPERATING_CONDITIONS,
+  OVERLOAD,
+  ERROR_IN_MEASUREMENT_CHANNEL,
+  ERROR
+};
 
 class DriverStim300
 {
 public:
-  DriverStim300(SerialDriver& serial_driver,
-                stim_300::DatagramIdentifier datagram_id = stim_300::DatagramIdentifier::RATE_ACC_INCL_TEMP_AUX,
-                stim_300::GyroOutputUnit gyro_output_unit = stim_300::GyroOutputUnit::ANGULAR_RATE,
-                stim_300::AccOutputUnit acc_output_unit = stim_300::AccOutputUnit::ACCELERATION,
-                stim_300::InclOutputUnit incl_output_unit = stim_300::InclOutputUnit::ACCELERATION,
-                SerialDriver::BAUDRATE baudrate = SerialDriver::BAUDRATE::BAUD_921600,
-                uint16_t serial_read_timeout_ms = 1);
-  ~DriverStim300();
-  double getAccX() const;
-  double getAccY() const;
-  double getAccZ() const;
-  double getGyroX() const;
-  double getGyroY() const;
-  double getGyroZ() const;
-  uint16_t getLatency_us() const;
-  double getAverageTemp() const;
-  bool isChecksumGood() const;
-  bool isSensorStatusGood() const;
-  uint8_t getInternalMeasurmentCounter() const;
-  bool processPacket();
+  DriverStim300(SerialDriver& serial_driver, DatagramIdentifier datagram_id, GyroOutputUnit gyro_output_unit,
+                AccOutputUnit acc_output_unit, InclOutputUnit incl_output_unit, AccRange acc_range, SampleFreq freq);
+  explicit DriverStim300(SerialDriver& serial_driver);
+  ~DriverStim300() = default;
+  // The class is Non-Copyable
+  DriverStim300(const DriverStim300& a) = delete;
+  DriverStim300& operator=(const DriverStim300& a) = delete;
+  // The class is non-movable
+  DriverStim300(DriverStim300&& a) = delete;
+  DriverStim300& operator=(DriverStim300&& a) = delete;
+
+  double getAccX() const noexcept;
+  double getAccY() const noexcept;
+  double getAccZ() const noexcept;
+  double getGyroX() const noexcept;
+  double getGyroY() const noexcept;
+  double getGyroZ() const noexcept;
+  double getIncX() const noexcept;
+  double getIncY() const noexcept;
+  double getIncZ() const noexcept;
+  uint16_t getSampleRate() const noexcept;
+
+  uint16_t getLatency_us() const noexcept;
+  double getAverageTemp() const noexcept;
+  std::string printSensorConfig() const noexcept;
+  bool isSensorStatusGood() const noexcept;
+  uint8_t getInternalMeasurementCounter() const noexcept;
+  Stim300Status update() noexcept;
 
 private:
   enum class Mode : uint8_t
@@ -40,24 +60,36 @@ private:
     Normal,
     Service
   };
-  Mode mode_;
+  Mode mode_{ Mode::Init };
+  enum class ReadingMode
+  {
+    IdentifyingDatagram,
+    ReadingDatagram,
+    VerifyingDatagramCR,
+    VerifyingDatagramLF
+  };
+  ReadingMode reading_mode_{ ReadingMode::IdentifyingDatagram };
 
   SerialDriver& serial_driver_;
-  uint16_t serial_read_timeout_ms_;
-  std::vector<uint8_t> buffer_;
-  size_t n_read_bytes_;
-  bool in_sync_;
-
-  stim_300::DatagramIdentifier datagram_id_;
   stim_300::DatagramParser datagram_parser_;
-  uint8_t datagram_size_;
+  std::vector<uint8_t> buffer_{};
+  size_t n_new_bytes_{ 0 };
+  size_t n_checked_bytes{ 0 };
 
-  stim_300::SensorData sensor_data_;
-  bool checksum_is_ok_;
-  bool no_internal_error_;
-
+  uint8_t datagram_id_;
   uint8_t crc_dummy_bytes_;
-  bool verifyChecksum(std::vector<uint8_t>::const_iterator begin, std::vector<uint8_t>::const_iterator end, uint32_t& expected_CRC);
+  uint8_t datagram_size_;
+  stim_300::SensorConfig sensor_config_;
+  bool read_config_from_sensor_{ true };
+  stim_300::SensorData sensor_data_{};
+  uint8_t sensor_status_{ 0 };
+
+  Stim300Status readDataStream();
+  bool setDatagramFormat(DatagramIdentifier id);
+  static bool verifyChecksum(const std::vector<uint8_t>::const_iterator& begin,
+                             const std::vector<uint8_t>::const_iterator& end, const uint8_t& crc_dummy_bytes);
+
+  void askForConfigDatagram();
 };
 
 #endif  // DRIVER_STIM300_DRIVER_STIM300_H

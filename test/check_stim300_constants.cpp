@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 #include <vector>
 
-using namespace stim_300;
+using namespace stim_const;
 
 std::vector<DatagramIdentifier> DATAGRAM_IDS{ DatagramIdentifier::CONFIGURATION_CRLF,
                                               DatagramIdentifier::CONFIGURATION,
