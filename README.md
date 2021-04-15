@@ -77,3 +77,28 @@ This will show a list on available commands including how to go back to normal m
     c
 
  will perform a system check.
+ 
+ ## Calibration 
+ 
+The following commands are used to calibrate the stim300 driver with the ESKF (Error-state Kalman filter)
+
+First launch the stim300 driver
+
+```bash
+roslaunch driver_stim300 stim300_driver.launch
+```
+
+Then move to another terminal and do the following
+
+```bash
+rosservice call /IMU_calibration
+```
+
+Now head over to the stim300-driver.launch terminal window and take note of the roll and pitch alignment errors.
+
+Find the parameter list for the ESKF and put in the roll and pitch errors in the following parameters
+
+```bash
+sr_accelerometer_alignment 
+sr_gyro_alignment
+```
