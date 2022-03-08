@@ -1,0 +1,14 @@
+name: clang-format check
+on: [push]
+jobs:
+  formatting-check:
+    name: C/C++ LLVM formatting check
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run clang-format style check for C/C++ packages
+      uses: jidicula/clang-format-action@v4.5.0
+      with:
+        clang-format-version: '13'
+        check-path: '.'
+        fallback-style: 'llvm' # for when the .clang-format file does not exist
