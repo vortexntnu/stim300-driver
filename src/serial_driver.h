@@ -2,6 +2,8 @@
 #ifndef DRIVER_STIM300_SERIAL_DRIVER_H
 #define DRIVER_STIM300_SERIAL_DRIVER_H
 
+#include <stdint.h>
+
 class SerialDriver {
 public:
   virtual ~SerialDriver() = default;

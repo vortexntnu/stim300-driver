@@ -10,6 +10,7 @@
 #include "stim300_constants.h"
 #include <cstring>
 #include <stdexcept>
+#include <stdint.h>
 
 class SerialUnix : public SerialDriver {
 public:
