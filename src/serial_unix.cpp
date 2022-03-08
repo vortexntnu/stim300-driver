@@ -3,39 +3,35 @@
 #include <iostream>
 // Everything is learned from
 // https://en.wikibooks.org/wiki/Serial_Programming/termios
-// "termios is the newer (now already a few decades old) Unix API for terminal I/O"
+// "termios is the newer (now already a few decades old) Unix API for terminal
+// I/O"
 
-SerialUnix::SerialUnix(const std::string& serial_port_name, stim_const::BaudRate baudrate)
-{
+SerialUnix::SerialUnix(const std::string &serial_port_name,
+                       stim_const::BaudRate baudrate) {
   open(serial_port_name, baudrate);
 }
 
-SerialUnix::~SerialUnix()
-{
-  close();
-}
+SerialUnix::~SerialUnix() { close(); }
 
-void SerialUnix::open(const std::string& serial_port_name, stim_const::BaudRate baudrate)
-{
+void SerialUnix::open(const std::string &serial_port_name,
+                      stim_const::BaudRate baudrate) {
   file_handle_ = ::open(serial_port_name.data(), O_RDWR | O_NOCTTY | O_NDELAY);
-  if (file_handle_ < 0)
-  {
-    throw std::runtime_error{ std::string{ strerror(errno) } + ": " + serial_port_name };
+  if (file_handle_ < 0) {
+    throw std::runtime_error{std::string{strerror(errno)} + ": " +
+                             serial_port_name};
   }
   //
   // Check if the file descriptor is pointing to a TTY device or not.
   //
-  if (!isatty(file_handle_))
-  {
-    throw std::runtime_error{ "Serial port is not TTY device" };
+  if (!isatty(file_handle_)) {
+    throw std::runtime_error{"Serial port is not TTY device"};
   }
 
   //
   // Get the current configuration of the serial interface
   //
-  if (tcgetattr(file_handle_, &config_) < 0)
-  {
-    throw std::runtime_error{ "Could not retrive current serial config" };
+  if (tcgetattr(file_handle_, &config_) < 0) {
+    throw std::runtime_error{"Could not retrive current serial config"};
   }
 
   //
@@ -46,7 +42,8 @@ void SerialUnix::open(const std::string& serial_port_name, stim_const::BaudRate 
   // no input parity check, don't strip high bit off,
   // no XON/XOFF software flow control
   //
-  config_.c_iflag &= ~(IGNBRK | BRKINT | ICRNL | INLCR | PARMRK | INPCK | ISTRIP | IXON);
+  config_.c_iflag &=
+      ~(IGNBRK | BRKINT | ICRNL | INLCR | PARMRK | INPCK | ISTRIP | IXON);
 
   //
   // Output flags - Turn off output processing
@@ -89,63 +86,54 @@ void SerialUnix::open(const std::string& serial_port_name, stim_const::BaudRate 
   // constants)
   //
   bool failure;
-  switch (baudrate)
-  {
-    case stim_const::BaudRate::BAUD_377400:
-      failure = (cfsetispeed(&config_, 377400) < 0 || cfsetospeed(&config_, 377400) < 0);
-      break;
-    case stim_const::BaudRate::BAUD_460800:
-      failure = (cfsetispeed(&config_, B460800) < 0 || cfsetospeed(&config_, B460800) < 0);
-      break;
-    case stim_const::BaudRate::BAUD_921600:
-      failure = (cfsetispeed(&config_, B921600) < 0 || cfsetospeed(&config_, B921600) < 0);
-      break;
-    case stim_const::BaudRate::BAUD_1843200:  // 921600:
-      failure = (cfsetispeed(&config_, 1843200) < 0 || cfsetospeed(&config_, 1843200) < 0);
-      break;
-    default:
-      failure = true;
+  switch (baudrate) {
+  case stim_const::BaudRate::BAUD_377400:
+    failure = (cfsetispeed(&config_, 377400) < 0 ||
+               cfsetospeed(&config_, 377400) < 0);
+    break;
+  case stim_const::BaudRate::BAUD_460800:
+    failure = (cfsetispeed(&config_, B460800) < 0 ||
+               cfsetospeed(&config_, B460800) < 0);
+    break;
+  case stim_const::BaudRate::BAUD_921600:
+    failure = (cfsetispeed(&config_, B921600) < 0 ||
+               cfsetospeed(&config_, B921600) < 0);
+    break;
+  case stim_const::BaudRate::BAUD_1843200: // 921600:
+    failure = (cfsetispeed(&config_, 1843200) < 0 ||
+               cfsetospeed(&config_, 1843200) < 0);
+    break;
+  default:
+    failure = true;
   }
-  if (failure)
-  {
-    throw std::runtime_error{ "Could not set baudrate" };
+  if (failure) {
+    throw std::runtime_error{"Could not set baudrate"};
   }
 
   //
   // Finally, apply the configuration
   //
-  if (tcsetattr(file_handle_, TCSAFLUSH, &config_) != 0)
-  {
-    throw std::runtime_error{ strerror(errno) };
+  if (tcsetattr(file_handle_, TCSAFLUSH, &config_) != 0) {
+    throw std::runtime_error{strerror(errno)};
   }
 }
 
-void SerialUnix::close()
-{
-  ::close(file_handle_);
-}
+void SerialUnix::close() { ::close(file_handle_); }
 
-bool SerialUnix::writeByte(uint8_t byte)
-{
+bool SerialUnix::writeByte(uint8_t byte) {
   int result = ::write(file_handle_, &byte, 1);
-  if (result == -1)
-  {
-    throw std::runtime_error{ "WriteByte error:" + std::string{ strerror(errno) } };
+  if (result == -1) {
+    throw std::runtime_error{"WriteByte error:" + std::string{strerror(errno)}};
   }
   return result == 1;
 }
 
-bool SerialUnix::readByte(uint8_t& byte)
-{
+bool SerialUnix::readByte(uint8_t &byte) {
   int result = read(file_handle_, &byte, 1);
-  if (result == -1)
-  {
-    throw std::runtime_error{ "ReadByte error:" + std::string{ strerror(errno) } };
+  if (result == -1) {
+    throw std::runtime_error{"ReadByte error:" + std::string{strerror(errno)}};
   }
   return (result == 1);
 }
 
-bool SerialUnix::flush()
-{
-  return tcflush(file_handle_, TCIOFLUSH) == 0;
-}
+bool SerialUnix::flush() { return tcflush(file_handle_, TCIOFLUSH) == 0; }
