@@ -76,14 +76,14 @@ int main(int argc, char** argv)
   int sample_rate{ 0 };
   double gravity{ 0 };
 
+
   node.param<std::string>("device_name", device_name, "/dev/ttyUSB0");
   node.param("variance_gyro", variance_gyro,0.0001*2*4.6*pow(10,-4));
-  node.param("variance_acc", variance_acc, 4.0);
+  node.param("variance_acc", variance_acc, 0.000055); 
   node.param("sample_rate", sample_rate, 125);
   node.param("gravity", gravity, 9.80665);
 
   sensor_msgs::Imu stim300msg{};
-  stim300msg.orientation_covariance[0] = -1;
   stim300msg.angular_velocity_covariance[0] = variance_gyro;
   stim300msg.angular_velocity_covariance[4] = variance_gyro;
   stim300msg.angular_velocity_covariance[8] = variance_gyro;
@@ -203,9 +203,9 @@ int main(int argc, char** argv)
                     // Acceleration wild point filter
 
                     // Previous message
-                    acceleration_buffer_x.push_back(driver_stim300.getAccX * gravity);
-                    acceleration_buffer_y.push_back(driver_stim300.getAccY * gravity);
-                    acceleration_buffer_z.push_back(driver_stim300.getAccZ * gravity);
+                    acceleration_buffer_x.push_back(driver_stim300.getAccX() * gravity);
+                    acceleration_buffer_y.push_back(driver_stim300.getAccY() * gravity);
+                    acceleration_buffer_z.push_back(driver_stim300.getAccZ() * gravity);
                     stim300msg.header.stamp = ros::Time::now();
 
                     if (acceleration_buffer_x.size() == 2 && acceleration_buffer_y.size() == 2 && acceleration_buffer_z.size() == 2)
