@@ -83,16 +83,17 @@ int main(int argc, char** argv)
   node.param("sample_rate", sample_rate, 125);
   node.param("gravity", gravity, 9.80665);
 
+  // These values have been estimated by having beluga in a pool for a couple of minutes, and then calculate the variance for each values
   sensor_msgs::Imu stim300msg{};
-  stim300msg.angular_velocity_covariance[0] = variance_gyro;
-  stim300msg.angular_velocity_covariance[4] = variance_gyro;
-  stim300msg.angular_velocity_covariance[8] = variance_gyro;
-  stim300msg.linear_acceleration_covariance[0] = variance_acc;
-  stim300msg.linear_acceleration_covariance[4] = variance_acc;
-  stim300msg.linear_acceleration_covariance[8] = variance_acc;
-  stim300msg.orientation.x = 0;
-  stim300msg.orientation.y = 0;
-  stim300msg.orientation.z = 0;
+  stim300msg.angular_velocity_covariance[0] = 0.0000027474;
+  stim300msg.angular_velocity_covariance[4] = 0.0000027474;
+  stim300msg.angular_velocity_covariance[8] = 0.000007312;
+  stim300msg.linear_acceleration_covariance[0] = 0.00041915;
+  stim300msg.linear_acceleration_covariance[4] = 0.00041915;
+  stim300msg.linear_acceleration_covariance[8] = 0.000018995;
+  stim300msg.orientation.x = 0.00000024358;
+  stim300msg.orientation.y = 0.00000024358;
+  stim300msg.orientation.z = 0.00000024358;
   stim300msg.header.frame_id = "imu_0";
 
   ros::Publisher imuSensorPublisher = node.advertise<sensor_msgs::Imu>("imu/data_raw", 1000);
