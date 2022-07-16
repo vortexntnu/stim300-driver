@@ -20,9 +20,10 @@ target_link_libraries(stim300_driver_lib)
 find_package(catkin REQUIRED COMPONENTS
         roscpp
         sensor_msgs
+	std_srvs
         )
 catkin_package(
-        CATKIN_DEPENDS sensor_msgs
+        CATKIN_DEPENDS sensor_msgs std_srvs
 )
 
 add_executable(stim300_driver_node src/stim300_driver_node.cpp)
