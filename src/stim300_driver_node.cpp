@@ -277,7 +277,7 @@ int main(int argc, char** argv)
 
                       if(std::abs(gyro_buffer_y.back() - gyro_buffer_y.front()) < std::max(2*std::abs(gyro_buffer_y.front()),GYRO_Y_PEAK_TO_PEAK_NOISE) || dropped_gyro_y_msg > MAX_DROPPED_GYRO_Y_MSG)
                       {
-                        stim300msg.angular_velocity.x = gyro_buffer_y.back();
+                        stim300msg.angular_velocity.y = gyro_buffer_y.back();
                         dropped_gyro_y_msg = 0;
                       }
                       else
