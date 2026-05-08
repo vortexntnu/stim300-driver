@@ -80,9 +80,9 @@ Stim300Status DriverStim300::readDataStream() {
         setDatagramFormat(DatagramIdentifier::CONFIGURATION_CRLF);
       } else {
         if (++n_checked_bytes > 100) {
-          // std::cerr << "Not able to recognise datagram" << std::endl;
-          if (read_config_from_sensor_)
-            askForConfigDatagram();
+          // std::cerr << "Lost sync, requesting config datagram to resync" << std::endl;
+          serial_driver_.flush();
+          askForConfigDatagram();
           n_checked_bytes = 0;
         }
         continue;
@@ -137,10 +137,11 @@ Stim300Status DriverStim300::readDataStream() {
     if (!verifyChecksum(buffer_.cbegin(), buffer_.cend(), crc_dummy_bytes_)) {
       // The "ID" was likely a byte happening to be equal the datagram id,
       // and not actually the start of a datagram, thus the buffer does
-      // not contain a complete datagram.
+      // not contain a complete datagram. Keep scanning rather than returning
+      // to avoid getting stuck on a misaligned false ID byte.
       // std::cerr << "CRC error" << std::endl;
       reading_mode_ = ReadingMode::IdentifyingDatagram;
-      return Stim300Status::NORMAL;
+      continue;
     }
 
     if (datagram_id_ ==
