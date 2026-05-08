@@ -144,7 +144,7 @@ void Stim300DriverNode::timerCallback() {
     RCLCPP_INFO(this->get_logger(), "Updated Stim 300 imu config: ");
     RCLCPP_INFO(this->get_logger(), "%s",
                 driver_stim300_->printSensorConfig().c_str());
-    sample_rate_ = driver_stim300_->getSampleRate() * 2;
+    sample_rate_ = driver_stim300_->getSampleRate();
     timer_->cancel();
     setupTimedCallback();
     break;
