@@ -6,8 +6,10 @@
 #include "sensor_msgs/msg/imu.hpp"
 #include "stim300_driver/stim300_stream.hpp"
 
+#include <array>
 #include <cmath>
 #include <memory>
+#include <string>
 
 struct Quaternion {
   double w, x, y, z;
@@ -44,7 +46,9 @@ private:
 
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_publisher_;
 
-  sensor_msgs::msg::Imu stim300msg_;
+  std::string            frame_id_;
+  std::array<double, 3>  gyro_variance_;
+  std::array<double, 3>  acc_variance_;
 
   std::unique_ptr<Stim300Stream> stream_;
 };

@@ -5,22 +5,20 @@ Stim300DriverNode::Stim300DriverNode(const rclcpp::NodeOptions & options)
 {
   declare_parameter<std::string>("device_name", "/dev/ttyUSB0");
   declare_parameter<double>("gravity", 9.80665);
+  declare_parameter<std::string>("frame_id", "imu_0");
+  declare_parameter<std::vector<double>>("gyro_variance", {0.0000027474, 0.0000027474, 0.000007312});
+  declare_parameter<std::vector<double>>("acc_variance",  {0.00041915,   0.00041915,   0.000018995});
 
-  const auto device_name = get_parameter("device_name").as_string();
-  const auto gravity     = get_parameter("gravity").as_double();
+  const auto device_name   = get_parameter("device_name").as_string();
+  const auto gravity       = get_parameter("gravity").as_double();
+  frame_id_                = get_parameter("frame_id").as_string();
+  const auto gyro_var      = get_parameter("gyro_variance").as_double_array();
+  const auto acc_var       = get_parameter("acc_variance").as_double_array();
+
+  gyro_variance_ = {gyro_var[0], gyro_var[1], gyro_var[2]};
+  acc_variance_  = {acc_var[0],  acc_var[1],  acc_var[2]};
 
   imu_publisher_ = create_publisher<sensor_msgs::msg::Imu>("imu/data_raw", 1000);
-
-  stim300msg_.angular_velocity_covariance[0]    = 0.0000027474;
-  stim300msg_.angular_velocity_covariance[4]    = 0.0000027474;
-  stim300msg_.angular_velocity_covariance[8]    = 0.000007312;
-  stim300msg_.linear_acceleration_covariance[0] = 0.00041915;
-  stim300msg_.linear_acceleration_covariance[4] = 0.00041915;
-  stim300msg_.linear_acceleration_covariance[8] = 0.000018995;
-  stim300msg_.orientation.x                     = 0.00000024358;
-  stim300msg_.orientation.y                     = 0.00000024358;
-  stim300msg_.orientation.z                     = 0.00000024358;
-  stim300msg_.header.frame_id                   = "imu_0";
 
   stream_ = std::make_unique<Stim300Stream>(
       device_name,
@@ -43,18 +41,30 @@ void Stim300DriverNode::on_measurement(const ImuMeasurement & meas)
   theta.pitch = atan2(-meas.inc_x, sqrt(pow(meas.inc_y, 2) + pow(meas.inc_z, 2)));
   const auto q = fromRPYToQuaternion(theta);
 
-  stim300msg_.header.stamp          = rclcpp::Time(meas.stamp_ns, RCL_SYSTEM_TIME);
-  stim300msg_.linear_acceleration.x = meas.acc_x;
-  stim300msg_.linear_acceleration.y = meas.acc_y;
-  stim300msg_.linear_acceleration.z = meas.acc_z;
-  stim300msg_.angular_velocity.x    = meas.gyro_x;
-  stim300msg_.angular_velocity.y    = meas.gyro_y;
-  stim300msg_.angular_velocity.z    = meas.gyro_z;
-  stim300msg_.orientation.w         = q.w;
-  stim300msg_.orientation.x         = q.x;
-  stim300msg_.orientation.y         = q.y;
-  stim300msg_.orientation.z         = q.z;
-  imu_publisher_->publish(stim300msg_);
+  auto msg = std::make_unique<sensor_msgs::msg::Imu>();
+
+  msg->header.stamp    = rclcpp::Time(meas.stamp_ns, RCL_SYSTEM_TIME);
+  msg->header.frame_id = frame_id_;
+
+  msg->angular_velocity_covariance[0]    = gyro_variance_[0];
+  msg->angular_velocity_covariance[4]    = gyro_variance_[1];
+  msg->angular_velocity_covariance[8]    = gyro_variance_[2];
+  msg->linear_acceleration_covariance[0] = acc_variance_[0];
+  msg->linear_acceleration_covariance[4] = acc_variance_[1];
+  msg->linear_acceleration_covariance[8] = acc_variance_[2];
+
+  msg->linear_acceleration.x = meas.acc_x;
+  msg->linear_acceleration.y = meas.acc_y;
+  msg->linear_acceleration.z = meas.acc_z;
+  msg->angular_velocity.x    = meas.gyro_x;
+  msg->angular_velocity.y    = meas.gyro_y;
+  msg->angular_velocity.z    = meas.gyro_z;
+  msg->orientation.w         = q.w;
+  msg->orientation.x         = q.x;
+  msg->orientation.y         = q.y;
+  msg->orientation.z         = q.z;
+
+  imu_publisher_->publish(std::move(msg));
 }
 
 void Stim300DriverNode::on_status(Stim300Status status, const DriverStim300 & driver)
