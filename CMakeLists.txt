@@ -7,16 +7,11 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 
 add_subdirectory(src)
-
-install(TARGETS
-  stim300_driver_lib
-  ros_stim300_driver_node
-  DESTINATION lib/${PROJECT_NAME}
-)
 
 install(
   DIRECTORY include/${PROJECT_NAME}

@@ -2,7 +2,7 @@ set(ROS_DRIVER_LIB ros_stim300_driver_lib)
 
 add_library(
     ${ROS_DRIVER_LIB}
-    SHARED    
+    SHARED
 )
 
 target_sources(
@@ -15,6 +15,7 @@ ament_target_dependencies(
     ${ROS_DRIVER_LIB}
     PUBLIC
     rclcpp
+    rclcpp_components
     sensor_msgs
     std_srvs
 )
@@ -31,33 +32,18 @@ target_include_directories(
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include/${PROJECT_NAME}>
 )
 
+rclcpp_components_register_node(
+  ${ROS_DRIVER_LIB}
+  PLUGIN "Stim300DriverNode"
+  EXECUTABLE ros_stim300_driver_node
+)
 
 install(TARGETS
     ${ROS_DRIVER_LIB}
     DESTINATION lib
 )
 
-
-set(STIM300_DRIVER_BINARY_NAME ros_stim300_driver_node)
-
-add_executable(
-  ${STIM300_DRIVER_BINARY_NAME}
-  ${CMAKE_CURRENT_SOURCE_DIR}/ros_stim300_driver_node.cpp
-)
-
-target_include_directories(
-  ${STIM300_DRIVER_BINARY_NAME}
-  PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include/${PROJECT_NAME}>
-)
-
-target_link_libraries(
-    ${STIM300_DRIVER_BINARY_NAME}
-    ${ROS_DRIVER_LIB}
-)
-
-install(
-  TARGETS
-  ${STIM300_DRIVER_BINARY_NAME}
-  DESTINATION lib/${PROJECT_NAME}
+install(TARGETS
+    ros_stim300_driver_node
+    DESTINATION lib/${PROJECT_NAME}
 )
