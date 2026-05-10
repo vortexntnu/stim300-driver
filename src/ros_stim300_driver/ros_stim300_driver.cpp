@@ -1,22 +1,5 @@
 #include "ros_stim300_driver/ros_stim300_driver.hpp"
 
-#include <cmath>
-
-Quaternion fromRPYToQuaternion(EulerAngles angles) {
-  const double cy = cos(angles.yaw   * 0.5);
-  const double sy = sin(angles.yaw   * 0.5);
-  const double cp = cos(angles.pitch * 0.5);
-  const double sp = sin(angles.pitch * 0.5);
-  const double cr = cos(angles.roll  * 0.5);
-  const double sr = sin(angles.roll  * 0.5);
-
-  return {
-    .w = cy * cp * cr + sy * sp * sr,
-    .x = cy * cp * sr - sy * sp * cr,
-    .y = sy * cp * sr + cy * sp * cr,
-    .z = sy * cp * cr - cy * sp * sr,
-  };
-}
 
 Stim300DriverNode::Stim300DriverNode(const rclcpp::NodeOptions & options)
 : Node("stim300_driver_node", options)

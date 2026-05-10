@@ -8,6 +8,7 @@
 #include "stim300_driver/stim300_stream.hpp"
 
 #include <atomic>
+#include <cmath>
 #include <memory>
 
 constexpr int NUMBER_OF_CALIBRATION_SAMPLES{100};
@@ -27,7 +28,21 @@ struct CalibrationData {
   int    n_samples{};
 };
 
-Quaternion fromRPYToQuaternion(EulerAngles angles);
+inline Quaternion fromRPYToQuaternion(EulerAngles angles) {
+  const double cy = cos(angles.yaw   * 0.5);
+  const double sy = sin(angles.yaw   * 0.5);
+  const double cp = cos(angles.pitch * 0.5);
+  const double sp = sin(angles.pitch * 0.5);
+  const double cr = cos(angles.roll  * 0.5);
+  const double sr = sin(angles.roll  * 0.5);
+
+  return {
+    .w = cy * cp * cr + sy * sp * sr,
+    .x = cy * cp * sr - sy * sp * cr,
+    .y = sy * cp * sr + cy * sp * cr,
+    .z = sy * cp * cr - cy * sp * sr,
+  };
+}
 
 class Stim300DriverNode : public rclcpp::Node {
 public:
