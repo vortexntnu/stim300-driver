@@ -1,22 +1,15 @@
 #include "ros_stim300_driver/ros_stim300_driver.hpp"
 
-
 Stim300DriverNode::Stim300DriverNode(const rclcpp::NodeOptions & options)
 : Node("stim300_driver_node", options)
 {
   declare_parameter<std::string>("device_name", "/dev/ttyUSB0");
-  declare_parameter<double>("variance_gyro", 0.0001 * 2 * 4.6 * pow(10, -4));
-  declare_parameter<double>("variance_acc", 0.000055);
   declare_parameter<double>("gravity", 9.80665);
 
   const auto device_name = get_parameter("device_name").as_string();
   const auto gravity     = get_parameter("gravity").as_double();
 
   imu_publisher_ = create_publisher<sensor_msgs::msg::Imu>("imu/data_raw", 1000);
-  calibration_service_ = create_service<std_srvs::srv::Trigger>(
-      "IMU_calibration",
-      std::bind(&Stim300DriverNode::responseCalibrateIMU, this,
-                std::placeholders::_1, std::placeholders::_2));
 
   stim300msg_.angular_velocity_covariance[0]    = 0.0000027474;
   stim300msg_.angular_velocity_covariance[4]    = 0.0000027474;
@@ -45,11 +38,6 @@ Stim300DriverNode::~Stim300DriverNode()
 
 void Stim300DriverNode::on_measurement(const ImuMeasurement & meas)
 {
-  if (calibration_mode_) {
-    calibrateSensor(meas);
-    return;
-  }
-
   EulerAngles theta;
   theta.roll  = atan2(meas.inc_y, meas.inc_z);
   theta.pitch = atan2(-meas.inc_x, sqrt(pow(meas.inc_y, 2) + pow(meas.inc_z, 2)));
@@ -67,26 +55,6 @@ void Stim300DriverNode::on_measurement(const ImuMeasurement & meas)
   stim300msg_.orientation.y         = q.y;
   stim300msg_.orientation.z         = q.z;
   imu_publisher_->publish(stim300msg_);
-}
-
-void Stim300DriverNode::calibrateSensor(const ImuMeasurement & meas)
-{
-  if (calibration_data_.n_samples < NUMBER_OF_CALIBRATION_SAMPLES) {
-    calibration_data_.n_samples++;
-    calibration_data_.inclination_x_sum += meas.inc_x;
-    calibration_data_.inclination_y_sum += meas.inc_y;
-    calibration_data_.inclination_z_sum += meas.inc_z;
-    return;
-  }
-
-  const double avg_x = calibration_data_.inclination_x_sum / NUMBER_OF_CALIBRATION_SAMPLES;
-  const double avg_y = calibration_data_.inclination_y_sum / NUMBER_OF_CALIBRATION_SAMPLES;
-  const double avg_z = calibration_data_.inclination_z_sum / NUMBER_OF_CALIBRATION_SAMPLES;
-
-  RCLCPP_INFO(get_logger(), "roll:  %f", atan2(avg_y, avg_z));
-  RCLCPP_INFO(get_logger(), "pitch: %f", atan2(-avg_x, sqrt(pow(avg_y, 2) + pow(avg_z, 2))));
-  RCLCPP_INFO(get_logger(), "IMU Calibrated");
-  calibration_mode_ = false;
 }
 
 void Stim300DriverNode::on_status(Stim300Status status, const DriverStim300 & driver)
@@ -117,19 +85,6 @@ void Stim300DriverNode::on_status(Stim300Status status, const DriverStim300 & dr
   default:
     break;
   }
-}
-
-bool Stim300DriverNode::responseCalibrateIMU(
-    const std::shared_ptr<std_srvs::srv::Trigger::Request>,
-    std::shared_ptr<std_srvs::srv::Trigger::Response> response)
-{
-  if (!calibration_mode_) {
-    calibration_data_ = CalibrationData{};
-    calibration_mode_ = true;
-    response->message = "IMU in calibration mode";
-    response->success = true;
-  }
-  return true;
 }
 
 RCLCPP_COMPONENTS_REGISTER_NODE(Stim300DriverNode)

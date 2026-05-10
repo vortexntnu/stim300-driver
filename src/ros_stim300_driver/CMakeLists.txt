@@ -17,7 +17,6 @@ ament_target_dependencies(
     rclcpp
     rclcpp_components
     sensor_msgs
-    std_srvs
 )
 
 target_link_libraries(
