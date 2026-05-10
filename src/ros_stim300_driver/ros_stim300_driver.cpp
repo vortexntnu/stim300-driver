@@ -27,7 +27,7 @@ Stim300DriverNode::Stim300DriverNode(const rclcpp::NodeOptions & options)
   declare_parameter<double>("gravity", 9.80665);
 
   const auto device_name = get_parameter("device_name").as_string();
-  gravity_ = get_parameter("gravity").as_double();
+  const auto gravity     = get_parameter("gravity").as_double();
 
   imu_publisher_ = create_publisher<sensor_msgs::msg::Imu>("imu/data_raw", 1000);
   calibration_service_ = create_service<std_srvs::srv::Trigger>(
@@ -48,8 +48,9 @@ Stim300DriverNode::Stim300DriverNode(const rclcpp::NodeOptions & options)
 
   stream_ = std::make_unique<Stim300Stream>(
       device_name,
-      [this](const DriverStim300 & driver) { on_measurement(driver); },
-      [this](Stim300Status status, const DriverStim300 & driver) { on_status(status, driver); });
+      gravity,
+      [this](const ImuMeasurement & meas)                     { on_measurement(meas); },
+      [this](Stim300Status status, const DriverStim300 & drv) { on_status(status, drv); });
 
   RCLCPP_INFO(get_logger(), "STIM300 IMU driver initialized successfully");
 }
@@ -59,43 +60,39 @@ Stim300DriverNode::~Stim300DriverNode()
   stream_.reset();
 }
 
-void Stim300DriverNode::on_measurement(const DriverStim300 & driver)
+void Stim300DriverNode::on_measurement(const ImuMeasurement & meas)
 {
-  const double inc_x = driver.getIncX();
-  const double inc_y = driver.getIncY();
-  const double inc_z = driver.getIncZ();
-
   if (calibration_mode_) {
-    calibrateSensor(inc_x, inc_y, inc_z);
+    calibrateSensor(meas);
     return;
   }
 
   EulerAngles theta;
-  theta.roll  = atan2(inc_y, inc_z);
-  theta.pitch = atan2(-inc_x, sqrt(pow(inc_y, 2) + pow(inc_z, 2)));
+  theta.roll  = atan2(meas.inc_y, meas.inc_z);
+  theta.pitch = atan2(-meas.inc_x, sqrt(pow(meas.inc_y, 2) + pow(meas.inc_z, 2)));
   const auto q = fromRPYToQuaternion(theta);
 
-  stim300msg_.header.stamp           = now();
-  stim300msg_.linear_acceleration.x  = driver.getAccX() * gravity_;
-  stim300msg_.linear_acceleration.y  = driver.getAccY() * gravity_;
-  stim300msg_.linear_acceleration.z  = driver.getAccZ() * gravity_;
-  stim300msg_.angular_velocity.x     = driver.getGyroX();
-  stim300msg_.angular_velocity.y     = driver.getGyroY();
-  stim300msg_.angular_velocity.z     = driver.getGyroZ();
-  stim300msg_.orientation.w          = q.w;
-  stim300msg_.orientation.x          = q.x;
-  stim300msg_.orientation.y          = q.y;
-  stim300msg_.orientation.z          = q.z;
+  stim300msg_.header.stamp          = rclcpp::Time(meas.stamp_ns, RCL_SYSTEM_TIME);
+  stim300msg_.linear_acceleration.x = meas.acc_x;
+  stim300msg_.linear_acceleration.y = meas.acc_y;
+  stim300msg_.linear_acceleration.z = meas.acc_z;
+  stim300msg_.angular_velocity.x    = meas.gyro_x;
+  stim300msg_.angular_velocity.y    = meas.gyro_y;
+  stim300msg_.angular_velocity.z    = meas.gyro_z;
+  stim300msg_.orientation.w         = q.w;
+  stim300msg_.orientation.x         = q.x;
+  stim300msg_.orientation.y         = q.y;
+  stim300msg_.orientation.z         = q.z;
   imu_publisher_->publish(stim300msg_);
 }
 
-void Stim300DriverNode::calibrateSensor(double inc_x, double inc_y, double inc_z)
+void Stim300DriverNode::calibrateSensor(const ImuMeasurement & meas)
 {
   if (calibration_data_.n_samples < NUMBER_OF_CALIBRATION_SAMPLES) {
     calibration_data_.n_samples++;
-    calibration_data_.inclination_x_sum += inc_x;
-    calibration_data_.inclination_y_sum += inc_y;
-    calibration_data_.inclination_z_sum += inc_z;
+    calibration_data_.inclination_x_sum += meas.inc_x;
+    calibration_data_.inclination_y_sum += meas.inc_y;
+    calibration_data_.inclination_z_sum += meas.inc_z;
     return;
   }
 

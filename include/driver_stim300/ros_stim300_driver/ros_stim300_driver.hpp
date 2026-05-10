@@ -35,9 +35,9 @@ public:
   ~Stim300DriverNode();
 
 private:
-  void on_measurement(const DriverStim300 & driver);
+  void on_measurement(const ImuMeasurement & meas);
   void on_status(Stim300Status status, const DriverStim300 & driver);
-  void calibrateSensor(double inc_x, double inc_y, double inc_z);
+  void calibrateSensor(const ImuMeasurement & meas);
 
   bool responseCalibrateIMU(
       const std::shared_ptr<std_srvs::srv::Trigger::Request>,
@@ -49,7 +49,6 @@ private:
   std::atomic<bool> calibration_mode_{false};
   CalibrationData   calibration_data_{};
 
-  double gravity_{};
   sensor_msgs::msg::Imu stim300msg_;
 
   std::unique_ptr<Stim300Stream> stream_;
