@@ -18,7 +18,7 @@ Stim300DriverNode::Stim300DriverNode(const rclcpp::NodeOptions & options)
   gyro_variance_ = {gyro_var[0], gyro_var[1], gyro_var[2]};
   acc_variance_  = {acc_var[0],  acc_var[1],  acc_var[2]};
 
-  imu_publisher_ = create_publisher<sensor_msgs::msg::Imu>("imu/data_raw", 1000);
+  imu_publisher_ = create_publisher<sensor_msgs::msg::Imu>("imu/data_raw", rclcpp::SensorDataQoS());
 
   stream_ = std::make_unique<Stim300Stream>(
       device_name,
