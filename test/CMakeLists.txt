@@ -17,7 +17,6 @@ target_link_libraries(check_datasheet_constanst
 ament_target_dependencies(check_datasheet_constanst
   rclcpp
   sensor_msgs
-  std_srvs
 )
 
 ament_add_gmock(check_driver_stim300
@@ -34,5 +33,4 @@ target_link_libraries(check_driver_stim300
 ament_target_dependencies(check_driver_stim300
   rclcpp
   sensor_msgs
-  std_srvs
 )
