@@ -24,33 +24,33 @@ std::vector<DatagramIdentifier> DATAGRAM_IDS{
     DatagramIdentifier::RATE_INCL_TEMP_AUX,
     DatagramIdentifier::RATE_ACC_INCL_TEMP_AUX};
 
-TEST(Stim300Constants, numberOfPaddingBytes) {
-  EXPECT_EQ(2, numberOfPaddingBytes(DatagramIdentifier::CONFIGURATION_CRLF));
-  EXPECT_EQ(2, numberOfPaddingBytes(DatagramIdentifier::CONFIGURATION));
-  EXPECT_EQ(2, numberOfPaddingBytes(DatagramIdentifier::RATE));
-  EXPECT_EQ(0, numberOfPaddingBytes(DatagramIdentifier::RATE_ACC));
-  EXPECT_EQ(0, numberOfPaddingBytes(DatagramIdentifier::RATE_INCL));
-  EXPECT_EQ(2, numberOfPaddingBytes(DatagramIdentifier::RATE_ACC_INCL));
-  EXPECT_EQ(3, numberOfPaddingBytes(DatagramIdentifier::RATE_TEMP));
-  EXPECT_EQ(2, numberOfPaddingBytes(DatagramIdentifier::RATE_ACC_TEMP));
-  EXPECT_EQ(2, numberOfPaddingBytes(DatagramIdentifier::RATE_INCL_TEMP));
-  EXPECT_EQ(1, numberOfPaddingBytes(DatagramIdentifier::RATE_ACC_INCL_TEMP));
-  EXPECT_EQ(2, numberOfPaddingBytes(DatagramIdentifier::RATE_AUX));
-  EXPECT_EQ(0, numberOfPaddingBytes(DatagramIdentifier::RATE_ACC_AUX));
-  EXPECT_EQ(0, numberOfPaddingBytes(DatagramIdentifier::RATE_INCL_AUX));
-  EXPECT_EQ(2, numberOfPaddingBytes(DatagramIdentifier::RATE_ACC_INCL_AUX));
-  EXPECT_EQ(3, numberOfPaddingBytes(DatagramIdentifier::RATE_TEMP_AUX));
-  EXPECT_EQ(2, numberOfPaddingBytes(DatagramIdentifier::RATE_ACC_TEMP_AUX));
-  EXPECT_EQ(2, numberOfPaddingBytes(DatagramIdentifier::RATE_INCL_TEMP_AUX));
-  EXPECT_EQ(1,
-            numberOfPaddingBytes(DatagramIdentifier::RATE_ACC_INCL_TEMP_AUX));
+TEST(Stim300Constants, number_of_padding_bytes) {
+  EXPECT_EQ(2, number_of_padding_bytes(DatagramIdentifier::CONFIGURATION_CRLF));
+  EXPECT_EQ(2, number_of_padding_bytes(DatagramIdentifier::CONFIGURATION));
+  EXPECT_EQ(2, number_of_padding_bytes(DatagramIdentifier::RATE));
+  EXPECT_EQ(0, number_of_padding_bytes(DatagramIdentifier::RATE_ACC));
+  EXPECT_EQ(0, number_of_padding_bytes(DatagramIdentifier::RATE_INCL));
+  EXPECT_EQ(2, number_of_padding_bytes(DatagramIdentifier::RATE_ACC_INCL));
+  EXPECT_EQ(3, number_of_padding_bytes(DatagramIdentifier::RATE_TEMP));
+  EXPECT_EQ(2, number_of_padding_bytes(DatagramIdentifier::RATE_ACC_TEMP));
+  EXPECT_EQ(2, number_of_padding_bytes(DatagramIdentifier::RATE_INCL_TEMP));
+  EXPECT_EQ(1, number_of_padding_bytes(DatagramIdentifier::RATE_ACC_INCL_TEMP));
+  EXPECT_EQ(2, number_of_padding_bytes(DatagramIdentifier::RATE_AUX));
+  EXPECT_EQ(0, number_of_padding_bytes(DatagramIdentifier::RATE_ACC_AUX));
+  EXPECT_EQ(0, number_of_padding_bytes(DatagramIdentifier::RATE_INCL_AUX));
+  EXPECT_EQ(2, number_of_padding_bytes(DatagramIdentifier::RATE_ACC_INCL_AUX));
+  EXPECT_EQ(3, number_of_padding_bytes(DatagramIdentifier::RATE_TEMP_AUX));
+  EXPECT_EQ(2, number_of_padding_bytes(DatagramIdentifier::RATE_ACC_TEMP_AUX));
+  EXPECT_EQ(2, number_of_padding_bytes(DatagramIdentifier::RATE_INCL_TEMP_AUX));
+  EXPECT_EQ(
+      1, number_of_padding_bytes(DatagramIdentifier::RATE_ACC_INCL_TEMP_AUX));
 }
 
 TEST(Stim300Constants, datagramIdentifier) {
   for (auto data_id : DATAGRAM_IDS)
     EXPECT_EQ(data_id,
-              rawToDatagramIdentifier(datagramIdentifierToRaw(data_id)));
-  // EXPECT_THROW(rawToDatagramIdentifier(0x00), std::out_of_range);
+              raw_to_datagram_identifier(datagram_identifier_to_raw(data_id)));
+  // EXPECT_THROW(raw_to_datagram_identifier(0x00), std::out_of_range);
 }
 
 int main(int argc, char **argv) {

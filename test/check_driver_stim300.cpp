@@ -1,51 +1,22 @@
-
-#include "stim300_driver/driver_stim300.hpp"
 #include "mock_serial_driver.h"
-#include "gmock/gmock.h"
+#include "stim300_driver/datagram_parser.hpp"
+#include "gtest/gtest.h"
 
-using ::testing::_;
-using ::testing::DoAll;
-using ::testing::Invoke;
-using ::testing::Return;
-using ::testing::ReturnRef;
-using ::testing::SetArgReferee;
+TEST(DatagramParserTest, parses_measurement_datagram) {
+  DatagramBuffer datagram;
+  stim_300::DatagramParser parser(
+      stim_const::DatagramIdentifier::RATE_ACC_INCL_TEMP_AUX,
+      stim_const::GyroOutputUnit::ANGULAR_RATE,
+      stim_const::AccOutputUnit::ACCELERATION,
+      stim_const::InclOutputUnit::ACCELERATION, stim_const::AccRange::G5);
 
-TEST(DriverTest, Test1) {
-  MockStim300SerialDriver serial_driver;
-  DatagramBuffer datagram_buffer;
-
-  ::testing::InSequence dummy; // Expect_calls must happen in specified sequence
-  EXPECT_CALL(serial_driver, flush()).Times(1);
-  EXPECT_CALL(serial_driver, writeByte('C')).Times(1);
-  EXPECT_CALL(serial_driver, writeByte('\r')).Times(1);
-
-  EXPECT_CALL(serial_driver, readByte(_))
-      .Times(63)
-      .WillRepeatedly(Invoke(&datagram_buffer, &DatagramBuffer::getNextByte));
-
-  // Only created a mock datagram for RATE_ACC_INCL_TEMP_AUX with all values
-  // equal to zero
-  // TODO: Create more advanced mock datagrams
-  DriverStim300 driverStim300(
-      serial_driver, stim_const::DatagramIdentifier::RATE_ACC_INCL_TEMP_AUX,
-      GyroOutputUnit::ANGULAR_RATE, AccOutputUnit::ACCELERATION,
-      InclOutputUnit::ACCELERATION, AccRange::G5, SampleFreq::S125);
-
-  EXPECT_EQ(Stim300Status::NEW_MEASURMENT, driverStim300.update());
-  EXPECT_DOUBLE_EQ(0, driverStim300.getGyroX());
-  EXPECT_DOUBLE_EQ(0, driverStim300.getGyroY());
-  EXPECT_DOUBLE_EQ(0, driverStim300.getGyroZ());
-  EXPECT_DOUBLE_EQ(0, driverStim300.getAccX());
-  EXPECT_DOUBLE_EQ(0, driverStim300.getAccY());
-  EXPECT_DOUBLE_EQ(0, driverStim300.getAccZ());
-
-  EXPECT_EQ(0, driverStim300.getLatency_us());
-  EXPECT_EQ(0, driverStim300.getInternalMeasurementCounter());
-}
-
-int main(int argc, char **argv) {
-  // The following line must be executed to initialize Google Mock
-  // (and Google Test) before running the tests.
-  ::testing::InitGoogleMock(&argc, argv);
-  return RUN_ALL_TESTS();
+  const auto data = parser.parse_data(datagram.data());
+  EXPECT_DOUBLE_EQ(0, data.gyro[0]);
+  EXPECT_DOUBLE_EQ(0, data.gyro[1]);
+  EXPECT_DOUBLE_EQ(0, data.gyro[2]);
+  EXPECT_DOUBLE_EQ(0, data.acc[0]);
+  EXPECT_DOUBLE_EQ(0, data.acc[1]);
+  EXPECT_DOUBLE_EQ(0, data.acc[2]);
+  EXPECT_EQ(0, data.latency_us);
+  EXPECT_EQ(0, data.counter);
 }

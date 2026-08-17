@@ -69,51 +69,52 @@ int32_t read_i24_be(const uint8_t *buf) {
 DatagramParser::DatagramParser(DatagramIdentifier dg_id, GyroOutputUnit gyro_o,
                                AccOutputUnit acc_o, InclOutputUnit incl_o,
                                AccRange acc_range)
-    : is_included_(isIncluded(dg_id)), temp_scale_(tempScale()),
-      aux_scale_(auxScale()) {
-  setDataScales(gyro_o, acc_o, incl_o, acc_range);
+    : is_included_(is_included(dg_id)), temp_scale_(temp_scale()),
+      aux_scale_(aux_scale()) {
+  set_data_scales(gyro_o, acc_o, incl_o, acc_range);
 }
-void DatagramParser::setDataParameters(SensorConfig sensor_config) {
-  is_included_ = isIncluded(sensor_config.datagram_id);
-  setDataScales(sensor_config.gyro_output_unit, sensor_config.acc_output_unit,
-                sensor_config.incl_output_unit, sensor_config.acc_range);
+void DatagramParser::set_data_parameters(const SensorConfig &sensor_config) {
+  is_included_ = is_included(sensor_config.datagram_id);
+  set_data_scales(sensor_config.gyro_output_unit, sensor_config.acc_output_unit,
+                  sensor_config.incl_output_unit, sensor_config.acc_range);
 }
-void DatagramParser::setDataScales(GyroOutputUnit gyro_o, AccOutputUnit acc_o,
-                                   InclOutputUnit incl_o, AccRange acc_range) {
+void DatagramParser::set_data_scales(GyroOutputUnit gyro_o, AccOutputUnit acc_o,
+                                     InclOutputUnit incl_o,
+                                     AccRange acc_range) {
   switch (gyro_o) {
   case GyroOutputUnit::ANGULAR_RATE:         // units are in rad/s
   case GyroOutputUnit::AVERAGE_ANGULAR_RATE: // units are in rad/s
-    gyro_scale_ = gyroScale();
+    gyro_scale_ = gyro_scale();
     break;
   case GyroOutputUnit::INCREMENTAL_ANGLE: // units are in rad/sample
   case GyroOutputUnit::INTEGRATED_ANGLE:  // units are in rad
-    gyro_scale_ = gyroIncrScale();
+    gyro_scale_ = gyro_incr_scale();
     break;
   }
   switch (acc_o) {
   case AccOutputUnit::ACCELERATION:         // units are in g
   case AccOutputUnit::AVERAGE_ACCELERATION: // units are in g
-    acc_scale_ = accScale(acc_range);
+    acc_scale_ = acc_scale(acc_range);
     break;
   case AccOutputUnit::INCREMENTAL_VELOCITY: // units are in m/s/sample
   case AccOutputUnit::INTEGRATED_VELOCITY:
-    acc_scale_ = accIncrScale(acc_range);
+    acc_scale_ = acc_incr_scale(acc_range);
     break;
   }
   switch (incl_o) {
   case InclOutputUnit::ACCELERATION:         // units are in g
   case InclOutputUnit::AVERAGE_ACCELERATION: // units are in g
-    incl_scale_ = inclScale();
+    incl_scale_ = incl_scale();
     break;
   case InclOutputUnit::INCREMENTAL_VELOCITY: // units are in m/s/sample
   case InclOutputUnit::INTEGRATED_VELOCITY:
-    incl_scale_ = inclIncrScale();
+    incl_scale_ = incl_incr_scale();
     break;
   }
 }
 
 uint32_t DatagramParser::parse_crc(const uint8_t *buf) {
-  return parse_u32_be(buf);
+  return read_u32_be(buf);
 }
 
 [[nodiscard]]
@@ -141,19 +142,28 @@ SensorData DatagramParser::parse_data(const uint8_t *buf) const {
     it += N_BYTES_STATUS;
   };
 
-  read_vec_i24(data.gyro, gyro_scale_);
-  read_vec_i24(data.acc, acc_scale_);
-  read_vec_i24(data.incl, incl_scale_);
+  if (is_included_[SensorIndx::GYRO])
+    read_vec_i24(data.gyro, gyro_scale_);
+  if (is_included_[SensorIndx::ACC])
+    read_vec_i24(data.acc, acc_scale_);
+  if (is_included_[SensorIndx::INCL])
+    read_vec_i24(data.incl, incl_scale_);
 
-  read_vec_i16(data.temp_gyro, temp_scale_);
-  read_vec_i16(data.temp_acc, temp_scale_);
-  read_vec_i16(data.temp_incl, temp_scale_);
+  if (is_included_[SensorIndx::TEMP]) {
+    if (is_included_[SensorIndx::GYRO])
+      read_vec_i16(data.temp_gyro, temp_scale_);
+    if (is_included_[SensorIndx::ACC])
+      read_vec_i16(data.temp_acc, temp_scale_);
+    if (is_included_[SensorIndx::INCL])
+      read_vec_i16(data.temp_incl, temp_scale_);
+  }
 
-  data.aux = aux_scale_ * read_i24_be(it);
-  it += N_BYTES_AUX_SENSOR;
-
-  data.status |= *it;
-  it += N_BYTES_STATUS;
+  if (is_included_[SensorIndx::AUX]) {
+    data.aux = aux_scale_ * read_i24_be(it);
+    it += N_BYTES_AUX_SENSOR;
+    data.status |= *it;
+    it += N_BYTES_STATUS;
+  }
 
   data.counter = *it;
   it += N_BYTES_COUNTER;
@@ -168,7 +178,7 @@ SensorConfig DatagramParser::parse_config(const uint8_t *cfg) const {
   SensorConfig sensor_config{};
 
   sensor_config.revision = cfg[1];
-  sensor_config.firmvare_version = cfg[2];
+  sensor_config.firmware_version = cfg[2];
 
   const uint8_t datagram_config = cfg[3];
 
@@ -193,7 +203,7 @@ SensorConfig DatagramParser::parse_config(const uint8_t *cfg) const {
     break;
   }
 
-  sensor_config.normal_datagram_CRLF = bit_is_set(datagram_config, CRLF_BIT);
+  sensor_config.normal_datagram_crlf = bit_is_set(datagram_config, CRLF_BIT);
 
   std::array<bool, 5> included_sensors{};
 
@@ -203,7 +213,7 @@ SensorConfig DatagramParser::parse_config(const uint8_t *cfg) const {
   included_sensors[SensorIndx::TEMP] = bit_is_set(datagram_config, TEMP_BIT);
   included_sensors[SensorIndx::AUX] = bit_is_set(datagram_config, AUX_BIT);
 
-  sensor_config.datagram_id = toDatagramID(included_sensors);
+  sensor_config.datagram_id = to_datagram_id(included_sensors);
 
   const uint8_t gyro_unit = output_unit_code(cfg[5]);
 

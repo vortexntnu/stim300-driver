@@ -1,19 +1,25 @@
-
 #include "stim300_driver/driver_stim300.hpp"
-#include <iostream>
 
-DriverStim300::DriverStim300(SerialDriver &serial_driver,
+#include <algorithm>
+#include <limits>
+#include <sstream>
+#include <termios.h>
+
+using namespace stim_const;
+
+DriverStim300::DriverStim300(boost::asio::io_context &io_context,
+                             const std::string &device,
                              DatagramIdentifier datagram_id,
                              GyroOutputUnit gyro_output_unit,
                              AccOutputUnit acc_output_unit,
                              InclOutputUnit incl_output_unit,
                              AccRange acc_range, SampleFreq freq)
-    : serial_driver_(serial_driver),
+    : serial_port_(io_context, device),
       datagram_parser_(datagram_id, gyro_output_unit, acc_output_unit,
                        incl_output_unit, acc_range),
-      datagram_id_(datagramIdentifierToRaw(datagram_id)),
-      crc_dummy_bytes_(numberOfPaddingBytes(datagram_id)),
-      datagram_size_(calculateDatagramSize(datagram_id)),
+      datagram_id_(datagram_identifier_to_raw(datagram_id)),
+      crc_dummy_bytes_(number_of_padding_bytes(datagram_id)),
+      datagram_size_(calculate_datagram_size(datagram_id)),
       sensor_config_{'0',
                      0,
                      freq,
@@ -22,319 +28,220 @@ DriverStim300::DriverStim300(SerialDriver &serial_driver,
                      gyro_output_unit,
                      acc_output_unit,
                      incl_output_unit,
-                     acc_range} {}
+                     acc_range} {
+  serial_port_.set_option(boost::asio::serial_port_base::baud_rate(921600));
+  serial_port_.set_option(boost::asio::serial_port_base::character_size(8));
+  serial_port_.set_option(boost::asio::serial_port_base::parity(
+      boost::asio::serial_port_base::parity::none));
+  serial_port_.set_option(boost::asio::serial_port_base::stop_bits(
+      boost::asio::serial_port_base::stop_bits::one));
+  serial_port_.set_option(boost::asio::serial_port_base::flow_control(
+      boost::asio::serial_port_base::flow_control::none));
+}
 
-DriverStim300::DriverStim300(SerialDriver &serial_driver)
-    : DriverStim300(serial_driver, DatagramIdentifier::RATE_ACC_INCL_TEMP_AUX,
+DriverStim300::DriverStim300(boost::asio::io_context &io_context,
+                             const std::string &device)
+    : DriverStim300(io_context, device,
+                    DatagramIdentifier::RATE_ACC_INCL_TEMP_AUX,
                     GyroOutputUnit::AVERAGE_ANGULAR_RATE,
                     AccOutputUnit::AVERAGE_ACCELERATION,
                     InclOutputUnit::AVERAGE_ACCELERATION, AccRange::G5,
                     SampleFreq::S125) {}
-double DriverStim300::getAccX() const noexcept { return sensor_data_.acc[0]; }
-double DriverStim300::getAccY() const noexcept { return sensor_data_.acc[1]; }
-double DriverStim300::getAccZ() const noexcept { return sensor_data_.acc[2]; }
-double DriverStim300::getGyroX() const noexcept { return sensor_data_.gyro[0]; }
-double DriverStim300::getGyroY() const noexcept { return sensor_data_.gyro[1]; }
-double DriverStim300::getGyroZ() const noexcept { return sensor_data_.gyro[2]; }
-double DriverStim300::getIncX() const noexcept { return sensor_data_.incl[0]; }
-double DriverStim300::getIncY() const noexcept { return sensor_data_.incl[1]; }
-double DriverStim300::getIncZ() const noexcept { return sensor_data_.incl[2]; }
-uint16_t DriverStim300::getSampleRate() const noexcept {
-  return stim_const::sampleFreq2int(sensor_config_.sample_freq);
+
+DriverStim300::~DriverStim300() { stop(); }
+
+void DriverStim300::start_async_read(StatusHandler status_handler) {
+  status_handler_ = std::move(status_handler);
+  ::tcflush(serial_port_.native_handle(), TCIOFLUSH);
+  ask_for_config_datagram();
+  async_read();
 }
 
-uint16_t DriverStim300::getLatency_us() const noexcept {
+void DriverStim300::stop() {
+  boost::system::error_code ignored;
+  serial_port_.cancel(ignored);
+  serial_port_.close(ignored);
+}
+
+void DriverStim300::async_read() {
+  serial_port_.async_read_some(
+      boost::asio::buffer(read_buffer_),
+      [this](const boost::system::error_code &error, std::size_t bytes_read) {
+        read_data_stream(error, bytes_read);
+      });
+}
+
+void DriverStim300::read_data_stream(const boost::system::error_code &error,
+                                     std::size_t bytes_read) {
+  if (error == boost::asio::error::operation_aborted)
+    return;
+  if (error) {
+    if (status_handler_)
+      status_handler_(Stim300Status::ERROR);
+    return;
+  }
+
+  pending_bytes_.insert(pending_bytes_.end(), read_buffer_.begin(),
+                        read_buffer_.begin() + bytes_read);
+  process_pending_data();
+  async_read();
+}
+
+void DriverStim300::process_pending_data() {
+  while (!pending_bytes_.empty()) {
+    const auto id = pending_bytes_.front();
+    const auto config_id =
+        datagram_identifier_to_raw(DatagramIdentifier::CONFIGURATION);
+    const auto config_crlf_id =
+        datagram_identifier_to_raw(DatagramIdentifier::CONFIGURATION_CRLF);
+
+    if (id != datagram_id_ && id != config_id && id != config_crlf_id) {
+      pending_bytes_.erase(pending_bytes_.begin());
+      continue;
+    }
+
+    const auto format = raw_to_datagram_identifier(id);
+    const auto datagram_size = calculate_datagram_size(format);
+    const bool has_crlf =
+        id == config_crlf_id ||
+        (id == datagram_id_ && sensor_config_.normal_datagram_crlf);
+    const std::size_t total_size = datagram_size + (has_crlf ? 2 : 0);
+    if (pending_bytes_.size() < total_size)
+      return;
+
+    if (has_crlf && (pending_bytes_[datagram_size] != '\r' ||
+                     pending_bytes_[datagram_size + 1] != '\n')) {
+      pending_bytes_.erase(pending_bytes_.begin());
+      continue;
+    }
+
+    const auto padding = number_of_padding_bytes(format);
+    if (!verify_checksum(pending_bytes_.data(), datagram_size, padding)) {
+      pending_bytes_.erase(pending_bytes_.begin());
+      continue;
+    }
+
+    const auto saved_id = datagram_id_;
+    const auto saved_size = datagram_size_;
+    const auto saved_padding = crc_dummy_bytes_;
+    datagram_id_ = id;
+    datagram_size_ = datagram_size;
+    crc_dummy_bytes_ = number_of_padding_bytes(format);
+    const auto status = parse_datagram();
+    if (id == config_id || id == config_crlf_id) {
+      // parse_datagram installs the format reported by the configuration.
+    } else {
+      datagram_id_ = saved_id;
+      datagram_size_ = saved_size;
+      crc_dummy_bytes_ = saved_padding;
+    }
+
+    pending_bytes_.erase(pending_bytes_.begin(),
+                         pending_bytes_.begin() + total_size);
+    if (status_handler_ && status != Stim300Status::NORMAL)
+      status_handler_(status);
+  }
+}
+
+Stim300Status DriverStim300::parse_datagram() {
+  const auto config_id =
+      datagram_identifier_to_raw(DatagramIdentifier::CONFIGURATION);
+  const auto config_crlf_id =
+      datagram_identifier_to_raw(DatagramIdentifier::CONFIGURATION_CRLF);
+  if (datagram_id_ == config_id || datagram_id_ == config_crlf_id) {
+    const auto config = datagram_parser_.parse_config(pending_bytes_.data());
+    const auto status = config != sensor_config_ ? Stim300Status::CONFIG_CHANGED
+                                                 : Stim300Status::NORMAL;
+    sensor_config_ = config;
+    set_datagram_format(config.datagram_id);
+    datagram_parser_.set_data_parameters(config);
+    return status;
+  }
+
+  sensor_data_ = datagram_parser_.parse_data(pending_bytes_.data());
+  sensor_status_ = sensor_data_.status;
+  if (sensor_status_ == 0)
+    return Stim300Status::NEW_MEASUREMENT;
+  if (sensor_status_ & (1u << 6u))
+    return Stim300Status::STARTING_SENSOR;
+  if (sensor_status_ & (1u << 7u))
+    return Stim300Status::SYSTEM_INTEGRITY_ERROR;
+  if (sensor_status_ & (1u << 5u))
+    return Stim300Status::OUTSIDE_OPERATING_CONDITIONS;
+  if (sensor_status_ & (1u << 4u))
+    return Stim300Status::OVERLOAD;
+  if (sensor_status_ & (1u << 3u))
+    return Stim300Status::ERROR_IN_MEASUREMENT_CHANNEL;
+  return Stim300Status::ERROR;
+}
+
+void DriverStim300::ask_for_config_datagram() {
+  static constexpr std::array<uint8_t, 2> command{'C', '\r'};
+  boost::asio::async_write(
+      serial_port_, boost::asio::buffer(command),
+      [this](const boost::system::error_code &error, std::size_t) {
+        if (error && status_handler_)
+          status_handler_(Stim300Status::ERROR);
+      });
+}
+
+void DriverStim300::set_datagram_format(DatagramIdentifier id) {
+  datagram_id_ = datagram_identifier_to_raw(id);
+  datagram_size_ = calculate_datagram_size(id);
+  crc_dummy_bytes_ = number_of_padding_bytes(id);
+}
+
+bool DriverStim300::verify_checksum(const uint8_t *begin, std::size_t size,
+                                    uint8_t crc_dummy_bytes) {
+  const auto crc = stim_300::DatagramParser::parse_crc(begin + size - 4);
+  std::vector<uint8_t> crc_data(begin, begin + size - 4);
+  crc_data.resize(crc_data.size() + crc_dummy_bytes, 0);
+  boost::crc_basic<32> calculator(0x04C11DB7, 0xFFFFFFFF, 0x00, false, false);
+  calculator.process_bytes(crc_data.data(), crc_data.size());
+  return calculator.checksum() == crc;
+}
+
+double DriverStim300::get_acc_x() const noexcept { return sensor_data_.acc[0]; }
+double DriverStim300::get_acc_y() const noexcept { return sensor_data_.acc[1]; }
+double DriverStim300::get_acc_z() const noexcept { return sensor_data_.acc[2]; }
+double DriverStim300::get_gyro_x() const noexcept {
+  return sensor_data_.gyro[0];
+}
+double DriverStim300::get_gyro_y() const noexcept {
+  return sensor_data_.gyro[1];
+}
+double DriverStim300::get_gyro_z() const noexcept {
+  return sensor_data_.gyro[2];
+}
+double DriverStim300::get_inc_x() const noexcept {
+  return sensor_data_.incl[0];
+}
+double DriverStim300::get_inc_y() const noexcept {
+  return sensor_data_.incl[1];
+}
+double DriverStim300::get_inc_z() const noexcept {
+  return sensor_data_.incl[2];
+}
+uint16_t DriverStim300::get_sample_rate() const noexcept {
+  return sample_freq_to_int(sensor_config_.sample_freq);
+}
+uint16_t DriverStim300::get_latency_us() const noexcept {
   return sensor_data_.latency_us;
 }
-bool DriverStim300::isSensorStatusGood() const noexcept {
+bool DriverStim300::is_sensor_status_good() const noexcept {
   return sensor_status_ == 0;
 }
-uint8_t DriverStim300::getInternalMeasurementCounter() const noexcept {
+uint8_t DriverStim300::get_internal_measurement_counter() const noexcept {
   return sensor_data_.counter;
 }
-
-double DriverStim300::getAverageTemp() const noexcept {
-  double sum{0};
-  uint8_t count{0};
-
-  return count != 0 ? sum / count : std::numeric_limits<double>::quiet_NaN();
+double DriverStim300::get_average_temp() const noexcept {
+  return std::numeric_limits<double>::quiet_NaN();
 }
 
-Stim300Status DriverStim300::readDataStream() {
-  // Read stream to identify the start of a datagram.
-  // If no datagram is identified after 100 bytes, ask for a config datagram.
-  // Read number of bytes belonging to the current datagram.
-  // Verify datagram (CRLF and CRC).
-  // Parse Datagram.
-  uint8_t byte;
-  while (serial_driver_.readByte(byte)) {
-    switch (reading_mode_) {
-    case ReadingMode::IdentifyingDatagram:
-      if (byte == datagram_id_) {
-        // Use current datagram format
-      } else if (byte ==
-                 datagramIdentifierToRaw(DatagramIdentifier::CONFIGURATION)) {
-        setDatagramFormat(DatagramIdentifier::CONFIGURATION);
-      } else if (byte == datagramIdentifierToRaw(
-                             DatagramIdentifier::CONFIGURATION_CRLF)) {
-        setDatagramFormat(DatagramIdentifier::CONFIGURATION_CRLF);
-      } else {
-        if (++n_checked_bytes > 100) {
-          // std::cerr << "Lost sync, requesting config datagram to resync" <<
-          // std::endl;
-          serial_driver_.flush();
-          askForConfigDatagram();
-          n_checked_bytes = 0;
-        }
-        continue;
-      }
-      // if (n_checked_bytes != 0)
-      //  std::cout << "Checked bytes: " << n_checked_bytes << std::endl;
-      n_checked_bytes = 0;
-      reading_mode_ = ReadingMode::ReadingDatagram;
-      buffer_.push_back(byte);
-      n_new_bytes_ = 1;
-      continue;
-
-    case ReadingMode::ReadingDatagram:
-
-      // Circular buffer
-      buffer_.push_back(byte);
-      n_new_bytes_++;
-      while (buffer_.size() > datagram_size_)
-        buffer_.erase(buffer_.begin());
-
-      if (n_new_bytes_ < datagram_size_)
-        continue;
-
-      // else the buffer is filled with a potential new datagram
-
-      if (sensor_config_.normal_datagram_CRLF or
-          datagram_id_ ==
-              datagramIdentifierToRaw(DatagramIdentifier::CONFIGURATION_CRLF)) {
-        reading_mode_ = ReadingMode::VerifyingDatagramCR;
-        continue;
-      }
-      break;
-
-    case ReadingMode::VerifyingDatagramCR:
-
-      if (byte == 0x0D) {
-        reading_mode_ = ReadingMode::VerifyingDatagramLF;
-        continue;
-      }
-      reading_mode_ = ReadingMode::IdentifyingDatagram;
-      return Stim300Status::NORMAL;
-
-    case ReadingMode::VerifyingDatagramLF:
-
-      if (byte == 0x0A) {
-        break;
-      }
-      reading_mode_ = ReadingMode::IdentifyingDatagram;
-      return Stim300Status::NORMAL;
-    } // end reading mode switch
-
-    if (!verifyChecksum(buffer_.cbegin(), buffer_.cend(), crc_dummy_bytes_)) {
-      // The "ID" was likely a byte happening to be equal the datagram id,
-      // and not actually the start of a datagram, thus the buffer does
-      // not contain a complete datagram. Keep scanning rather than returning
-      // to avoid getting stuck on a misaligned false ID byte.
-      // std::cerr << "CRC error" << std::endl;
-      reading_mode_ = ReadingMode::IdentifyingDatagram;
-      continue;
-    }
-
-    if (datagram_id_ ==
-            datagramIdentifierToRaw(DatagramIdentifier::CONFIGURATION_CRLF) or
-        datagram_id_ ==
-            datagramIdentifierToRaw(DatagramIdentifier::CONFIGURATION)) {
-      stim_300::SensorConfig sensor_config =
-          datagram_parser_.parseConfig(buffer_.cbegin());
-      Stim300Status status{Stim300Status::NORMAL};
-      if (sensor_config != sensor_config_)
-        status = Stim300Status::CONFIG_CHANGED;
-
-      sensor_config_ = sensor_config;
-      setDatagramFormat(sensor_config_.datagram_id);
-      datagram_parser_.setDataParameters(sensor_config_);
-      read_config_from_sensor_ = false;
-      // std::cout << "Parsed config datagram" << std::endl;
-      reading_mode_ = ReadingMode::IdentifyingDatagram;
-      return status;
-    } else // Normal (measurement) datagram
-    {
-      sensor_status_ =
-          datagram_parser_.parseData(buffer_.cbegin(), sensor_data_);
-      reading_mode_ = ReadingMode::IdentifyingDatagram;
-
-      if (sensor_status_ == 0)
-        return Stim300Status::NEW_MEASURMENT;
-      else if (sensor_status_ & (1u << 6u))
-        return Stim300Status::STARTING_SENSOR;
-      else if (sensor_status_ & (1u << 7u))
-        return Stim300Status::SYSTEM_INTEGRITY_ERROR;
-      else if (sensor_status_ & (1u << 5u))
-        return Stim300Status::OUTSIDE_OPERATING_CONDITIONS;
-      else if (sensor_status_ & (1u << 4u))
-        return Stim300Status::OVERLOAD;
-      else if (sensor_status_ & (1u << 3u))
-        return Stim300Status::ERROR_IN_MEASUREMENT_CHANNEL;
-      else
-        return Stim300Status::ERROR;
-    }
-  }
-  return Stim300Status::NORMAL;
-}
-
-void DriverStim300::askForConfigDatagram() {
-  serial_driver_.writeByte('C');
-  serial_driver_.writeByte('\r');
-}
-
-Stim300Status DriverStim300::update() noexcept {
-  switch (mode_) {
-  case Mode::Init:
-    serial_driver_.flush();
-    if (read_config_from_sensor_)
-      askForConfigDatagram();
-    mode_ = Mode::Normal;
-  case Mode::Normal:
-    return readDataStream();
-  case Mode::Service:
-    mode_ = Mode::Normal;
-    return Stim300Status::NORMAL;
-  default:
-    return Stim300Status::NORMAL;
-  }
-}
-
-void DriverStim300::setDatagramFormat(DatagramIdentifier id) {
-  datagram_id_ = datagramIdentifierToRaw(id);
-  datagram_size_ = calculateDatagramSize(id);
-  crc_dummy_bytes_ = numberOfPaddingBytes(id);
-}
-
-bool DriverStim300::verifyChecksum(
-    const std::vector<uint8_t>::const_iterator &begin,
-    const std::vector<uint8_t>::const_iterator &end,
-    const uint8_t &crc_dummy_bytes) {
-  uint32_t crc = stim_300::DatagramParser::parseCRC(end - sizeof(uint32_t));
-
-  boost::crc_basic<32> crc_32_calculator(0x04C11DB7, 0xFFFFFFFF, 0x00, false,
-                                         false);
-  uint8_t buffer_CRC[end - begin - sizeof(uint32_t) + crc_dummy_bytes];
-  std::copy(begin, end - sizeof(uint32_t) + crc_dummy_bytes, buffer_CRC);
-
-  /** Fill the Dummy bytes with 0x00. There are at the end of the buffer **/
-  for (size_t i = 0; i < crc_dummy_bytes; ++i)
-    buffer_CRC[sizeof(buffer_CRC) - (1 + i)] = 0x00;
-
-  crc_32_calculator.process_bytes(buffer_CRC, sizeof(buffer_CRC));
-  auto crc_calck = crc_32_calculator.checksum();
-  return crc_calck == crc;
-}
-
-std::string DriverStim300::printSensorConfig() const noexcept {
-  std::stringstream ss;
-  ss << "\nFirmware: " << sensor_config_.revision
-     << std::to_string(sensor_config_.firmvare_version) << std::endl;
-  ss << "Sample_freq: ";
-  switch (sensor_config_.sample_freq) {
-  case SampleFreq::S125:
-    ss << "125 Hz";
-    break;
-  case SampleFreq::S250:
-    ss << "250 Hz";
-    break;
-  case SampleFreq::S500:
-    ss << "500 Hz";
-    break;
-  case SampleFreq::S1000:
-    ss << "1000 Hz";
-    break;
-  case SampleFreq::S2000:
-    ss << "2000 Hz";
-    break;
-  case SampleFreq::TRG:
-    ss << "External Trigger";
-    break;
-  }
-  ss << std::endl;
-  auto included_sensors = isIncluded(sensor_config_.datagram_id);
-  ss << "Gyro:\t\t\t" << included_sensors[SensorIndx::GYRO] << std::endl;
-  ss << "Accelerometer:\t" << included_sensors[SensorIndx::ACC] << std::endl;
-  ss << "Inlcinometer:\t" << included_sensors[SensorIndx::INCL] << std::endl;
-  ss << "Temprature:\t\t" << included_sensors[SensorIndx::TEMP] << std::endl;
-  ss << "Aux:\t\t\t" << included_sensors[SensorIndx::AUX] << std::endl;
-  ss << "Normal Datagram termination: " << sensor_config_.normal_datagram_CRLF
-     << std::endl;
-  ss << "Gyro output:\t\t\t";
-  switch (sensor_config_.gyro_output_unit) {
-  case GyroOutputUnit::ANGULAR_RATE:
-    ss << "Angular rate";
-    break;
-  case GyroOutputUnit::AVERAGE_ANGULAR_RATE:
-    ss << "Average angular rate";
-    break;
-  case GyroOutputUnit::INCREMENTAL_ANGLE:
-    ss << "Incremental angle";
-    break;
-  case GyroOutputUnit::INTEGRATED_ANGLE:
-    ss << "Integrated angle";
-    break;
-  }
-  ss << std::endl;
-  ss << "Accelerometer output:\t";
-  switch (sensor_config_.acc_output_unit) {
-  case AccOutputUnit::ACCELERATION:
-    ss << "Acceleration";
-    break;
-  case AccOutputUnit::AVERAGE_ACCELERATION:
-    ss << "Average acceleration";
-    break;
-  case AccOutputUnit::INCREMENTAL_VELOCITY:
-    ss << "Incremental velocity";
-    break;
-  case AccOutputUnit::INTEGRATED_VELOCITY:
-    ss << "Integrated velocity";
-    break;
-  }
-  ss << std::endl;
-  ss << "Inclinometer output:\t";
-  switch (sensor_config_.incl_output_unit) {
-  case InclOutputUnit::ACCELERATION:
-    ss << "Acceleration";
-    break;
-  case InclOutputUnit::AVERAGE_ACCELERATION:
-    ss << "Average acceleration";
-    break;
-  case InclOutputUnit::INCREMENTAL_VELOCITY:
-    ss << "Incremental velocity";
-    break;
-  case InclOutputUnit::INTEGRATED_VELOCITY:
-    ss << "Integrated velocity";
-    break;
-  }
-  ss << std::endl;
-  ss << "Acceleration range: ";
-  switch (sensor_config_.acc_range) {
-  case AccRange::G2:
-    ss << "2";
-    break;
-  case AccRange::G5:
-    ss << "5";
-    break;
-  case AccRange::G10:
-    ss << "10";
-    break;
-  case AccRange::G30:
-    ss << "30";
-    break;
-  case AccRange::G80:
-    ss << "80";
-    break;
-  }
-  ss << " g." << std::endl;
-  return ss.str();
+std::string DriverStim300::print_sensor_config() const noexcept {
+  std::stringstream stream;
+  stream << "Firmware: " << sensor_config_.revision
+         << std::to_string(sensor_config_.firmware_version)
+         << ", sample rate: " << get_sample_rate() << " Hz";
+  return stream.str();
 }
