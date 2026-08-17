@@ -13,16 +13,16 @@ DriverStim300::DriverStim300(SerialDriver &serial_driver,
                        incl_output_unit, acc_range),
       datagram_id_(datagramIdentifierToRaw(datagram_id)),
       crc_dummy_bytes_(numberOfPaddingBytes(datagram_id)),
-      datagram_size_(calculateDatagramSize(datagram_id)), sensor_config_{
-                                                              '0',
-                                                              0,
-                                                              freq,
-                                                              datagram_id,
-                                                              false,
-                                                              gyro_output_unit,
-                                                              acc_output_unit,
-                                                              incl_output_unit,
-                                                              acc_range} {}
+      datagram_size_(calculateDatagramSize(datagram_id)),
+      sensor_config_{'0',
+                     0,
+                     freq,
+                     datagram_id,
+                     false,
+                     gyro_output_unit,
+                     acc_output_unit,
+                     incl_output_unit,
+                     acc_range} {}
 
 DriverStim300::DriverStim300(SerialDriver &serial_driver)
     : DriverStim300(serial_driver, DatagramIdentifier::RATE_ACC_INCL_TEMP_AUX,
@@ -80,7 +80,8 @@ Stim300Status DriverStim300::readDataStream() {
         setDatagramFormat(DatagramIdentifier::CONFIGURATION_CRLF);
       } else {
         if (++n_checked_bytes > 100) {
-          // std::cerr << "Lost sync, requesting config datagram to resync" << std::endl;
+          // std::cerr << "Lost sync, requesting config datagram to resync" <<
+          // std::endl;
           serial_driver_.flush();
           askForConfigDatagram();
           n_checked_bytes = 0;
